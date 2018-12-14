@@ -1,0 +1,4 @@
+@This file contains deviations from the default definitions
+@"Block name"; Block type"; "Old definition"; "New definition"
+"*"; "DMS"; "P,19,1;"; "P,19,TEST;"
+"*"; "DMS"; "P,19,1;"; "P,19,TEST;"
