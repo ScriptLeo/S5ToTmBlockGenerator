@@ -221,3 +221,63 @@ Traceback (most recent call last):
   File "H:/S5ToTmBlockGenerator/main.py", line 125, in connect_to_users
     self.children[0] = BlockGenerator()
 IndexError: list assignment index out of range
+12-14 22:52
+Traceback (most recent call last):
+  File "H:/S5ToTmBlockGenerator/main.py", line 309, in main
+    Gui()
+  File "H:/S5ToTmBlockGenerator/main.py", line 104, in __init__
+    {'widget': self.components['frame_search'], 'order': 5, 'side': TOP, 'fill': X, 'flag': False},
+KeyError: 'frame_search'
+12-14 22:53
+Traceback (most recent call last):
+  File "H:/S5ToTmBlockGenerator/main.py", line 310, in main
+    Gui()
+  File "H:/S5ToTmBlockGenerator/main.py", line 87, in __init__
+    self.__init_frame_search()
+  File "H:/S5ToTmBlockGenerator/main.py", line 150, in __init_frame_search
+    entry_search = Entry(self.frame_search, width=10)
+AttributeError: 'Gui' object has no attribute 'frame_search'
+12-14 23:06
+Traceback (most recent call last):
+  File "H:/S5ToTmBlockGenerator/main.py", line 316, in main
+    Gui()
+  File "H:/S5ToTmBlockGenerator/main.py", line 105, in __init__
+    self.__connect_to_users()
+  File "H:/S5ToTmBlockGenerator/main.py", line 173, in __connect_to_users
+    self.children[child_id].connect_to_gui(self, child_id)
+  File "H:/S5ToTmBlockGenerator/main.py", line 268, in connect_to_gui
+    self.parent.btn_generate.config(command=lambda: self.generate_blocks(self.parent.entry_new_path.get()))
+AttributeError: 'Gui' object has no attribute 'btn_generate'
+12-14 23:06
+Traceback (most recent call last):
+  File "H:/S5ToTmBlockGenerator/main.py", line 316, in main
+    Gui()
+  File "H:/S5ToTmBlockGenerator/main.py", line 105, in __init__
+    self.__connect_to_users()
+  File "H:/S5ToTmBlockGenerator/main.py", line 173, in __connect_to_users
+    self.children[child_id].connect_to_gui(self, child_id)
+  File "H:/S5ToTmBlockGenerator/main.py", line 268, in connect_to_gui
+    self.parent.components['frame_generate'].config(command=lambda: self.generate_blocks(self.parent.entry_new_path.get()))
+  File "C:\Users\EivindBrate\AppData\Local\Programs\Python\Python37\lib\tkinter\__init__.py", line 1482, in configure
+    return self._configure('configure', cnf, kw)
+  File "C:\Users\EivindBrate\AppData\Local\Programs\Python\Python37\lib\tkinter\__init__.py", line 1473, in _configure
+    self.tk.call(_flatten((self._w, cmd)) + self._options(cnf))
+_tkinter.TclError: unknown option "-command"
+12-14 23:07
+Traceback (most recent call last):
+  File "H:/S5ToTmBlockGenerator/main.py", line 316, in main
+    Gui()
+  File "H:/S5ToTmBlockGenerator/main.py", line 105, in __init__
+    self.__connect_to_users()
+  File "H:/S5ToTmBlockGenerator/main.py", line 173, in __connect_to_users
+    self.children[child_id].connect_to_gui(self, child_id)
+  File "H:/S5ToTmBlockGenerator/main.py", line 268, in connect_to_gui
+    self.parent.components['button_generate'].config(command=lambda: self.generate_blocks(self.parent.entry_new_path.get()))
+KeyError: 'button_generate'
+12-14 23:22
+Traceback (most recent call last):
+  File "H:/S5ToTmBlockGenerator/main.py", line 315, in main
+    Gui()
+  File "H:/S5ToTmBlockGenerator/main.py", line 50, in __init__
+    {'widget': self.components['frame_debug'], 'side': TOP, 'fill': X, 'flag': False},
+KeyError: 'frame_debug'

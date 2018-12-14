@@ -23,85 +23,29 @@ class Gui:
         self.help_text = "This won't help you at all.."
         self.children = {}
         self._next_child_id = 0
+        self.components = {}
 
         self.__init_menu()
-
-        # Debug
-        self.frame_debug = Frame(self.root)
-        lbl_debug = Label(self.frame_debug, text="DEBUG MODE", fg="red")
-
-        lbl_debug.pack(side=RIGHT)
-
-        # Separator
+        self.__init_debug()
         separator = Frame(height=2, borderwidth=1, relief=GROOVE)
-
-        # Frame - Source
-        self.frame_source = Frame(self.root)
-        self.entry_new_path = Entry(self.frame_source)
-        btn_set_directory = Button(self.frame_source,
-                                   text="Set source",
-                                   command=lambda: self.__set_directory(self.entry_new_path))
-        self.entry_new_path.bind(sequence='<KeyRelease>', func=self.__path_keypress)
-
-        btn_set_directory.pack(side=LEFT, padx=5, pady=5)
-        self.entry_new_path.pack(side=LEFT, fill=X, expand=YES, padx=5)
-
-        # Frame - Generate
-        frame_generate = Frame(self.root)
-        self.btn_generate = Button(frame_generate,
-                                   text="Generate",
-                                   state='disabled',
-                                   )
-        self.btn_generate.pack(side=RIGHT, padx=5, pady=5, fill=X)
-
-        # Frame - Progress
-        frame_progress = Frame(self.root)
-        progressbar = Progressbar(frame_progress, style='black.Horizontal.TProgressbar')
-        self.lbl_progress = Label(frame_progress, text="Idle", width=10)
-
-        self.lbl_progress.pack(side=LEFT)
-        progressbar.pack(side=RIGHT, padx=5, pady=5, fill=X, expand=YES)
-
-        # Frame - Tabs
-        self.frame_tabs = Frame(self.root)
-        tab_control = Notebook(self.frame_tabs)
-
-        frame_log = Frame(tab_control)
-        self.txt_log = Text(frame_log, wrap='none', state='disabled')
-        scrollbar_hori = Scrollbar(frame_log, orient=HORIZONTAL, command=self.txt_log.xview)
-        self.txt_log['xscrollcommand'] = scrollbar_hori.set
-        scrollbar_vert = Scrollbar(frame_log, command=self.txt_log.yview)
-        self.txt_log['yscrollcommand'] = scrollbar_vert.set
-        self.txt_log.bind('<Control-f>', self.__tab_hotkeys)
-        self.txt_log.tag_configure("blue", foreground="blue")
-
-        scrollbar_vert.pack(side=RIGHT, fill=Y, pady=(5, 25))
-        scrollbar_hori.pack(side=BOTTOM, fill=X, padx=(5, 5))
-        self.txt_log.pack(side=LEFT, padx=5, pady=5, fill=BOTH, expand=YES)
-
-        tab_control.add(frame_log, text='Log')
-        tab_control.pack(fill=BOTH, expand=YES)
-
-        # Frame - Search
-        self.frame_search = Frame(self.root)
-        self.entry_search = Entry(self.frame_search, width=10)
-        self.entry_search.bind(sequence='<KeyRelease>', func=self.__search_keypress)
-        lbl_search = Label(self.frame_search, text='Search')
-
-        self.entry_search.pack(side=RIGHT, padx=(0, 25))
-        lbl_search.pack(side=RIGHT)
+        self.__init_frame_source()
+        self.__init_frame_generate()
+        self.__init_frame_progress()
+        self.__init_frame_tabs()
+        self.__init_frame_search()
 
         # Pack to root
         # Order in pack_list determines order in root
+        # Indices must match the order in the list
         self.packing = {
             'list': [
-                {'widget': frame_progress, 'order': 0, 'side': BOTTOM, 'fill': X, 'flag': True},
-                {'widget': separator, 'order': 1, 'side': BOTTOM, 'fill': X, 'flag': True, 'pady': (3, 0)},
-                {'widget': frame_generate, 'order': 2, 'side': BOTTOM, 'fill': X, 'flag': True},
-                {'widget': self.frame_debug, 'order': 3, 'side': TOP, 'fill': X, 'flag': False},
-                {'widget': self.frame_source, 'order': 4, 'side': TOP, 'fill': X, 'flag': True},
-                {'widget': self.frame_search, 'order': 5, 'side': TOP, 'fill': X, 'flag': False},
-                {'widget': self.frame_tabs, 'order': 6, 'side': TOP, 'fill': BOTH, 'expand': YES, 'flag': True}
+                {'widget': self.components['frame_progress'], 'side': BOTTOM, 'fill': X, 'flag': True},
+                {'widget': separator, 'side': BOTTOM, 'fill': X, 'flag': True, 'pady': (3, 0)},
+                {'widget': self.components['frame_generate'], 'side': BOTTOM, 'fill': X, 'flag': True},
+                {'widget': self.components['frame_debug'], 'side': TOP, 'fill': X, 'flag': False},
+                {'widget': self.components['frame_source'], 'side': TOP, 'fill': X, 'flag': True},
+                {'widget': self.components['frame_search'], 'side': TOP, 'fill': X, 'flag': False},
+                {'widget': self.components['frame_tabs'], 'side': TOP, 'fill': BOTH, 'expand': YES, 'flag': True}
             ],
             'indices': {
                 'frame_progress': 0,
@@ -113,8 +57,8 @@ class Gui:
                 'frame_tab': 6
             }
         }
-        self.repack()
         self.__connect_to_users()
+        self.repack()
         self.root.mainloop()
 
     def __init_menu(self):
@@ -131,20 +75,85 @@ class Gui:
         menubar.add_command(label="addons")
         self.root.config(menu=menubar)
 
+    def __init_debug(self):
+        frame_debug = Frame(self.root)
+        lbl_debug = Label(frame_debug, text="DEBUG MODE", fg="red")
+
+        lbl_debug.pack(side=RIGHT)
+
+        self.components['frame_debug'] = frame_debug
+
     def __init_frame_source(self):
-        pass
+        frame_source = Frame(self.root)
+        entry_new_path = Entry(frame_source)
+        btn_set_directory = Button(frame_source,
+                                   text="Set source",
+                                   command=lambda: self.__set_directory(entry_new_path))
+        entry_new_path.bind(sequence='<KeyRelease>', func=self.__path_keypress)
+
+        btn_set_directory.pack(side=LEFT, padx=5, pady=5)
+        entry_new_path.pack(side=LEFT, fill=X, expand=YES, padx=5)
+
+        self.components['frame_source'] = frame_source
+        self.components['entry_new_path'] = entry_new_path
+        self.components['btn_set_directory'] = btn_set_directory
 
     def __init_frame_generate(self):
-        pass
+        frame_generate = Frame(self.root)
+        btn_generate = Button(frame_generate,
+                              text="Generate",
+                              state='disabled',
+                              )
+        btn_generate.pack(side=RIGHT, padx=5, pady=5, fill=X)
+
+        self.components['frame_generate'] = frame_generate
+        self.components['btn_generate'] = btn_generate
 
     def __init_frame_progress(self):
-        pass
+        frame_progress = Frame(self.root)
+        progressbar = Progressbar(frame_progress, style='black.Horizontal.TProgressbar')
+        lbl_progress = Label(frame_progress, text="Idle", width=10)
+
+        lbl_progress.pack(side=LEFT)
+        progressbar.pack(side=RIGHT, padx=5, pady=5, fill=X, expand=YES)
+
+        self.components['frame_progress'] = frame_progress
+        self.components['lbl_progress'] = lbl_progress
 
     def __init_frame_tabs(self):
-        pass
+        frame_tabs = Frame(self.root)
+        tab_control = Notebook(frame_tabs)
+
+        frame_log = Frame(tab_control)
+        txt_log = Text(frame_log, wrap='none', state='disabled')
+        scrollbar_hori = Scrollbar(frame_log, orient=HORIZONTAL, command=txt_log.xview)
+        txt_log['xscrollcommand'] = scrollbar_hori.set
+        scrollbar_vert = Scrollbar(frame_log, command=txt_log.yview)
+        txt_log['yscrollcommand'] = scrollbar_vert.set
+        txt_log.bind('<Control-f>', self.__tab_hotkeys)
+        txt_log.tag_configure("blue", foreground="blue")
+
+        scrollbar_vert.pack(side=RIGHT, fill=Y, pady=(5, 25))
+        scrollbar_hori.pack(side=BOTTOM, fill=X, padx=(5, 5))
+        txt_log.pack(side=LEFT, padx=5, pady=5, fill=BOTH, expand=YES)
+
+        tab_control.add(frame_log, text='Log')
+        tab_control.pack(fill=BOTH, expand=YES)
+
+        self.components['frame_tabs'] = frame_tabs
+        self.components['txt_log'] = txt_log
 
     def __init_frame_search(self):
-        pass
+        frame_search = Frame(self.root)
+        entry_search = Entry(frame_search, width=10)
+        entry_search.bind(sequence='<KeyRelease>', func=self.__search_keypress)
+        lbl_search = Label(frame_search, text='Search')
+
+        entry_search.pack(side=RIGHT, padx=(0, 25))
+        lbl_search.pack(side=RIGHT)
+
+        self.components['frame_search'] = frame_search
+        self.components['entry_search'] = entry_search
 
     def __provide_child_id(self):
         self._next_child_id += 1
@@ -162,16 +171,16 @@ class Gui:
         if self.DEBUG_MODE:
             self.DEBUG_MODE = False
             self.__set_flag('frame_debug', False)
-            if not os.path.isfile(self.entry_new_path.get()):
-                self.btn_generate.config(state='disabled')
-            self.txt_log.config(state='disabled')
+            if not os.path.isfile(self.components['entry_new_path'].get()):
+                self.components['btn_generate'].config(state='disabled')
+            self.components['txt_log'].config(state='disabled')
             self.repack(TOP)
 
         else:
             self.DEBUG_MODE = True
             self.__set_flag('frame_debug', True)
-            self.btn_generate.config(state='normal')
-            self.txt_log.config(state='normal')
+            self.components['btn_generate'].config(state='normal')
+            self.components['txt_log'].config(state='normal')
             self.repack(TOP)
 
     @staticmethod
@@ -197,18 +206,18 @@ class Gui:
         messagebox.showinfo("Help", self.help_text)
 
     def __search_keypress(self, _):
-        text: str = self.txt_log.get('1.0', 'end-1c')
+        text: str = self.components['txt_log'].get('1.0', 'end-1c')
         text_array = text.splitlines()
         try:
             # TODO include column position
-            index = [i for i, s in enumerate(text_array) if self.entry_search.get() in s]
-            self.txt_log.see(str(index[0] + 1)+'.0')
+            index = [i for i, s in enumerate(text_array) if self.components['frame_search'].get() in s]
+            self.components['txt_log'].see(str(index[0] + 1)+'.0')
 
         except:
             pass
 
     def __tab_hotkeys(self, _):
-        if self.frame_search.winfo_ismapped():
+        if self.components['frame_search'].winfo_ismapped():
             self.__set_flag('frame_search', False)
             self.repack()
 
@@ -217,7 +226,8 @@ class Gui:
             self.repack()
 
     def __path_keypress(self, _):
-        self.btn_generate.config(state='normal' if os.path.isfile(self.entry_new_path.get()) else 'disabled')
+        self.components['btn_generate'].config(
+            state='normal' if os.path.isfile(self.components['entry_new_path'].get()) else 'disabled')
 
     def __set_directory(self, widget):
         """
@@ -231,7 +241,7 @@ class Gui:
             widget.delete(0, END)
             widget.insert(0, response)
             widget.xview_moveto(1.0)
-            self.btn_generate.config(state='normal')
+            self.components['btn_generate'].config(state='normal')
 
 
 class BlockGenerator:
@@ -240,7 +250,7 @@ class BlockGenerator:
     """
     def __init__(self):
         self.source_file: str = ''
-        self.output_file: str = 'code.txt'
+        self.output_file: str = 'output.txt'
         self.deviations_file: str = 'blockdefs/@deviations.csv'
         self.parent: Gui = None
         self.child_id = None
@@ -248,7 +258,8 @@ class BlockGenerator:
     def connect_to_gui(self, parent, child_id):
         self.child_id = child_id
         self.parent = parent
-        self.parent.btn_generate.config(command=lambda: self.generate_blocks(self.parent.entry_new_path.get()))
+        self.parent.components['btn_generate'].config(
+            command=lambda: self.generate_blocks(self.parent.components['entry_new_path'].get()))
 
     @staticmethod
     def interpret_file(file):
@@ -270,7 +281,7 @@ class BlockGenerator:
         :param source_file:
         :return:
         """
-        self.parent.lbl_progress.config(text='Processing')
+        self.parent.components['lbl_progress'].config(text='Processing')
         self.source_file = source_file
 
         raw_output = open(self.output_file, 'w+')
@@ -278,16 +289,16 @@ class BlockGenerator:
         list_tags = [] if self.parent.DEBUG_MODE else self.interpret_file(source_file)
 
         for line in deviations:
-            self.parent.txt_log.config(state='normal')
-            self.parent.txt_log.insert('end', ''.join(line) + '\n')
+            self.parent.components['txt_log'].config(state='normal')
+            self.parent.components['txt_log'].insert('end', ''.join(line) + '\n')
             # self.gui_handle.txt_log.tag_add('red', )  # TODO add colored text support
-            self.parent.txt_log.config(state='disabled')
+            self.parent.components['txt_log'].config(state='disabled')
 
         # idx_of_MKZ = list_tags[0].index('Type')
         # for line_data in list_tags[1:]:
         #     pass
 
-        self.parent.lbl_progress.config(text='Idle')
+        self.parent.components['lbl_progress'].config(text='Idle')
 
 
 def get_timestamp():
