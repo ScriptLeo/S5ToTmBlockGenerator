@@ -18,12 +18,14 @@ class Gui:
         self.root.title("Shell GUI")
         self.root.geometry("400x400")
         self.root.minsize(width=200, height=200)
+        self.root.protocol("WM_DELETE_WINDOW", self.__on_closing)
 
         self.DEBUG_MODE = False
         self.help_text = "This won't help you at all.."
         self.children = {}
         self._next_child_id = 0
         self.components = {}
+        self.instance_changes = []
 
         self.__init_menu()
         self.__init_debug()
@@ -40,19 +42,19 @@ class Gui:
         self.packing = {
             'list': [
                 {'name': 'frame_progress', 'widget': self.components['frame_progress'],
-                 'side': BOTTOM, 'fill': X, 'flag': True},
+                 'side': BOTTOM, 'fill': X, 'flag': True, 'default': True},
                 {'name': 'separator', 'widget': separator,
-                 'side': BOTTOM, 'fill': X, 'flag': True, 'pady': (3, 0)},
+                 'side': BOTTOM, 'fill': X, 'pady': (3, 0), 'flag': True, 'default': True},
                 {'name': 'frame_generate', 'widget': self.components['frame_generate'],
-                 'side': BOTTOM, 'fill': X, 'flag': True},
+                 'side': BOTTOM, 'fill': X, 'flag': True, 'default': True},
                 {'name': 'frame_debug', 'widget': self.components['frame_debug'],
-                 'side': TOP, 'fill': X, 'flag': False},
+                 'side': TOP, 'fill': X, 'flag': False, 'default': False},
                 {'name': 'frame_source', 'widget': self.components['frame_source'],
-                 'side': TOP, 'fill': X, 'flag': True},
+                 'side': TOP, 'fill': X, 'flag': True, 'default': True},
                 {'name': 'frame_search', 'widget': self.components['frame_search'],
-                 'side': TOP, 'fill': X, 'flag': False},
+                 'side': TOP, 'fill': X, 'flag': False, 'default': False},
                 {'name': 'frame_tabs', 'widget': self.components['frame_tabs'],
-                 'side': TOP, 'fill': BOTH, 'expand': YES, 'flag': True}
+                 'side': TOP, 'fill': BOTH, 'expand': YES, 'flag': True, 'default': True}
             ],
             'indices': {
                 'frame_progress': 0,
@@ -65,8 +67,20 @@ class Gui:
             }
         }
         self.__connect_to_users()
-        self.repack()
+        self.__repack()
         self.root.mainloop()
+
+    def __on_closing(self):
+        if self.instance_changes:
+            for item in self.instance_changes:
+                if item == 'flags_changed':
+                    response = messagebox.askyesnocancel("Unsaved flag changes",
+                                                         "Do you to save flag settings before quitting?")
+                    if response is None:
+                        return
+                    elif response:
+                        self.__save_flags()
+        self.root.destroy()
 
     def __init_menu(self):
         menubar = Menu(self.root)
@@ -86,19 +100,22 @@ class Gui:
         if 'window_flags' not in self.components.keys() or not self.components['window_flags'].state() == 'normal':
             window_flags = Tk()
             window_flags.title("flags")
-            window_flags.geometry("200x350")
+            window_flags.geometry("270x350")
             window_flags.minsize(width=200, height=200)
 
-            variants = []
-            for w in self.packing['list']:
+            v = []
+            Button(window_flags, text='set', command=lambda: self.__set_flags(v)).pack(side=BOTTOM, anchor='e')
+            for i, w in enumerate(self.packing['list']):
                 row = Frame(window_flags)
                 Label(row, text=w['name']).pack(side=LEFT)
-                var = StringVar(row)
-                var.set('True' if w['flag'] else 'False')
-                choices = {'True', 'False'}
-                OptionMenu(row, var, *choices).pack(side=RIGHT)
-                var.trace('w', callback=lambda a, b, c: self.__change_dropdown(var, w))  # TODO fix individual dropdown http://stupidpythonideas.blogspot.com/2016/01/for-each-loops-should-define-new.html
-                variants.append(lambda v=var: v)
+
+                v.append({'idx': i, 'var': StringVar(row)})
+                v[-1]['var'].set(str(w['flag']))
+                choices = ['True(default)' if w['default'] else 'True',
+                           'False(default)' if not w['default'] else 'False']
+                opt = OptionMenu(row, v[-1]['var'], *choices)
+                opt.config(width=12)
+                opt.pack(side=RIGHT)
 
                 row.pack(side=TOP, fill=X)
                 Frame(window_flags, height=2, borderwidth=1, relief=GROOVE).pack(side=TOP, fill=X)
@@ -107,9 +124,17 @@ class Gui:
 
             self.components['window_flags'] = window_flags
 
-    def __change_dropdown(self, var, w):
-        w['flag'] = True if var.get() == 'True' else False
-        self.repack()
+    def __set_flags(self, v):
+        for d in v:
+            self.packing['list'][d['idx']]['flag'] = True if d['var'].get() in ('True', 'True(default)') else False
+        self.__repack()
+        if 'flags_changed' not in self.instance_changes:
+            self.instance_changes.append('flags_changed')
+
+    def __save_flags(self):
+        file = open('shell.config', 'w+')
+        for w in self.packing['list']:
+            file.write(w['name'] + '=' + str(w['flag']) + '\n')
 
     def __init_debug(self):
         frame_debug = Frame(self.root)
@@ -210,20 +235,20 @@ class Gui:
             if not os.path.isfile(self.components['entry_new_path'].get()):
                 self.components['btn_generate'].config(state='disabled')
             self.components['txt_log'].config(state='disabled')
-            self.repack(TOP)
+            self.__repack(TOP)
 
         else:
             self.DEBUG_MODE = True
             self.__set_flag('frame_debug', True)
             self.components['btn_generate'].config(state='normal')
             self.components['txt_log'].config(state='normal')
-            self.repack(TOP)
+            self.__repack(TOP)
 
     @staticmethod
     def __val(d, key):
         return d[key] if key in d.keys() else None
 
-    def repack(self, s=None):
+    def __repack(self, s=None):
 
         for w in self.packing['list']:
             if s is None or s == w['side']:
@@ -255,11 +280,11 @@ class Gui:
     def __tab_hotkeys(self, _):
         if self.components['frame_search'].winfo_ismapped():
             self.__set_flag('frame_search', False)
-            self.repack()
+            self.__repack()
 
         else:
             self.__set_flag('frame_search', True)
-            self.repack()
+            self.__repack()
 
     def __path_keypress(self, _):
         self.components['btn_generate'].config(
