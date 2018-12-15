@@ -281,3 +281,14 @@ Traceback (most recent call last):
   File "H:/S5ToTmBlockGenerator/main.py", line 50, in __init__
     {'widget': self.components['frame_debug'], 'side': TOP, 'fill': X, 'flag': False},
 KeyError: 'frame_debug'
+12-14 23:44
+Traceback (most recent call last):
+  File "H:/S5ToTmBlockGenerator/main.py", line 311, in main
+    Gui()
+  File "H:/S5ToTmBlockGenerator/main.py", line 60, in __init__
+    self.__connect_to_users()
+  File "H:/S5ToTmBlockGenerator/main.py", line 165, in __connect_to_users
+    self.children[child_id].connect_to_gui(self, child_id)
+  File "H:/S5ToTmBlockGenerator/main.py", line 263, in connect_to_gui
+    self.parent.title("Block Generator")
+AttributeError: 'Gui' object has no attribute 'title'

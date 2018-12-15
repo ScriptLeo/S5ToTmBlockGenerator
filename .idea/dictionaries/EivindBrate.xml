@@ -4,12 +4,14 @@
       <w>addons</w>
       <w>asctime</w>
       <w>blockdefs</w>
+      <w>dropdown</w>
       <w>hori</w>
       <w>hotkeys</w>
       <w>menubar</w>
       <w>padx</w>
       <w>pady</w>
       <w>taglist</w>
+      <w>tkvar</w>
       <w>vert</w>
       <w>xscrollcommand</w>
       <w>yscrollcommand</w>

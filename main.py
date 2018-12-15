@@ -1,5 +1,5 @@
 from tkinter import *
-from tkinter import filedialog, Entry, messagebox, Text, Scrollbar, Menu
+from tkinter import filedialog, Entry, messagebox, Text, Scrollbar, Menu, OptionMenu
 from tkinter.ttk import Frame, Button, Progressbar, Notebook
 import csv
 import os
@@ -15,7 +15,7 @@ class Gui:
 
     def __init__(self):
         self.root = Tk()
-        self.root.title("Block Generator")
+        self.root.title("Shell GUI")
         self.root.geometry("400x400")
         self.root.minsize(width=200, height=200)
 
@@ -39,13 +39,20 @@ class Gui:
         # Indices must match the order in the list
         self.packing = {
             'list': [
-                {'widget': self.components['frame_progress'], 'side': BOTTOM, 'fill': X, 'flag': True},
-                {'widget': separator, 'side': BOTTOM, 'fill': X, 'flag': True, 'pady': (3, 0)},
-                {'widget': self.components['frame_generate'], 'side': BOTTOM, 'fill': X, 'flag': True},
-                {'widget': self.components['frame_debug'], 'side': TOP, 'fill': X, 'flag': False},
-                {'widget': self.components['frame_source'], 'side': TOP, 'fill': X, 'flag': True},
-                {'widget': self.components['frame_search'], 'side': TOP, 'fill': X, 'flag': False},
-                {'widget': self.components['frame_tabs'], 'side': TOP, 'fill': BOTH, 'expand': YES, 'flag': True}
+                {'name': 'frame_progress', 'widget': self.components['frame_progress'],
+                 'side': BOTTOM, 'fill': X, 'flag': True},
+                {'name': 'separator', 'widget': separator,
+                 'side': BOTTOM, 'fill': X, 'flag': True, 'pady': (3, 0)},
+                {'name': 'frame_generate', 'widget': self.components['frame_generate'],
+                 'side': BOTTOM, 'fill': X, 'flag': True},
+                {'name': 'frame_debug', 'widget': self.components['frame_debug'],
+                 'side': TOP, 'fill': X, 'flag': False},
+                {'name': 'frame_source', 'widget': self.components['frame_source'],
+                 'side': TOP, 'fill': X, 'flag': True},
+                {'name': 'frame_search', 'widget': self.components['frame_search'],
+                 'side': TOP, 'fill': X, 'flag': False},
+                {'name': 'frame_tabs', 'widget': self.components['frame_tabs'],
+                 'side': TOP, 'fill': BOTH, 'expand': YES, 'flag': True}
             ],
             'indices': {
                 'frame_progress': 0,
@@ -71,9 +78,38 @@ class Gui:
 
         # Add to menubar
         menubar.add_cascade(label="options", menu=menu_options)
-        menubar.add_command(label="flags")
+        menubar.add_command(label="flags", command=self.__open_flag_settings)
         menubar.add_command(label="addons")
         self.root.config(menu=menubar)
+
+    def __open_flag_settings(self):
+        if 'window_flags' not in self.components.keys() or not self.components['window_flags'].state() == 'normal':
+            window_flags = Tk()
+            window_flags.title("flags")
+            window_flags.geometry("200x350")
+            window_flags.minsize(width=200, height=200)
+
+            variants = []
+            for w in self.packing['list']:
+                row = Frame(window_flags)
+                Label(row, text=w['name']).pack(side=LEFT)
+                var = StringVar(row)
+                var.set('True' if w['flag'] else 'False')
+                choices = {'True', 'False'}
+                OptionMenu(row, var, *choices).pack(side=RIGHT)
+                var.trace('w', callback=lambda a, b, c: self.__change_dropdown(var, w))  # TODO fix individual dropdown http://stupidpythonideas.blogspot.com/2016/01/for-each-loops-should-define-new.html
+                variants.append(lambda v=var: v)
+
+                row.pack(side=TOP, fill=X)
+                Frame(window_flags, height=2, borderwidth=1, relief=GROOVE).pack(side=TOP, fill=X)
+
+            window_flags.mainloop()
+
+            self.components['window_flags'] = window_flags
+
+    def __change_dropdown(self, var, w):
+        w['flag'] = True if var.get() == 'True' else False
+        self.repack()
 
     def __init_debug(self):
         frame_debug = Frame(self.root)
@@ -260,6 +296,7 @@ class BlockGenerator:
         self.parent = parent
         self.parent.components['btn_generate'].config(
             command=lambda: self.generate_blocks(self.parent.components['entry_new_path'].get()))
+        self.parent.root.title("Block Generator")
 
     @staticmethod
     def interpret_file(file):
