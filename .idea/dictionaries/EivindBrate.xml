@@ -10,8 +10,10 @@
       <w>menubar</w>
       <w>padx</w>
       <w>pady</w>
+      <w>quotechar</w>
       <w>taglist</w>
       <w>tkvar</w>
+      <w>toolwindow</w>
       <w>vert</w>
       <w>xscrollcommand</w>
       <w>yscrollcommand</w>

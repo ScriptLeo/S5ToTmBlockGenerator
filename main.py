@@ -14,12 +14,14 @@ class Gui:
     """
 
     def __init__(self):
+        # ROOT
         self.root = Tk()
         self.root.title("Shell GUI")
         self.root.geometry("400x400")
         self.root.minsize(width=200, height=200)
         self.root.protocol("WM_DELETE_WINDOW", self.__on_closing)
 
+        # Declarations
         self.DEBUG_MODE = False
         self.help_text = "This won't help you at all.."
         self.children = {}
@@ -27,35 +29,41 @@ class Gui:
         self.components = {}
         self.instance_changes = []
 
+        # Initializations
         self.__init_menu()
         self.__init_debug()
-        separator = Frame(height=2, borderwidth=1, relief=GROOVE)
         self.__init_frame_source()
         self.__init_frame_generate()
         self.__init_frame_progress()
         self.__init_frame_tabs()
         self.__init_frame_search()
+        self.__set_pack_order()
+        self.__repack()
+        self.__connect_to_users()
+        self.root.mainloop()
 
-        # Pack to root
+    def __set_pack_order(self):
+        separator = Frame(height=2, borderwidth=1, relief=GROOVE)
+
         # Order in pack_list determines order in root
-        # Indices must match the order in the list
         self.packing = {
             'list': [
                 {'name': 'frame_progress', 'widget': self.components['frame_progress'],
-                 'side': BOTTOM, 'fill': X, 'flag': True, 'default': True},
+                 'side': BOTTOM, 'fill': X, 'default': True, 'operable': True},
                 {'name': 'separator', 'widget': separator,
-                 'side': BOTTOM, 'fill': X, 'pady': (3, 0), 'flag': True, 'default': True},
+                 'side': BOTTOM, 'fill': X, 'pady': (3, 0), 'default': True, 'operable': True},
                 {'name': 'frame_generate', 'widget': self.components['frame_generate'],
-                 'side': BOTTOM, 'fill': X, 'flag': True, 'default': True},
+                 'side': BOTTOM, 'fill': X, 'default': True, 'operable': True},
                 {'name': 'frame_debug', 'widget': self.components['frame_debug'],
-                 'side': TOP, 'fill': X, 'flag': False, 'default': False},
+                 'side': TOP, 'fill': X, 'default': False, 'operable': True},
                 {'name': 'frame_source', 'widget': self.components['frame_source'],
-                 'side': TOP, 'fill': X, 'flag': True, 'default': True},
+                 'side': TOP, 'fill': X, 'default': True, 'operable': True},
                 {'name': 'frame_search', 'widget': self.components['frame_search'],
-                 'side': TOP, 'fill': X, 'flag': False, 'default': False},
+                 'side': TOP, 'fill': X, 'default': False, 'operable': True},
                 {'name': 'frame_tabs', 'widget': self.components['frame_tabs'],
-                 'side': TOP, 'fill': BOTH, 'expand': YES, 'flag': True, 'default': True}
+                 'side': TOP, 'fill': BOTH, 'expand': YES, 'default': True, 'operable': True}
             ],
+            # Indices must match the order in the list
             'indices': {
                 'frame_progress': 0,
                 'separator': 1,
@@ -66,9 +74,17 @@ class Gui:
                 'frame_tab': 6
             }
         }
-        self.__connect_to_users()
-        self.__repack()
-        self.root.mainloop()
+        config = self.interpret_file('shell.config', '=') if os.path.isfile('shell.config') else []
+        for w in self.packing['list']:
+            w['flag'] = self.__get_config_setting(config, w)
+
+    @staticmethod
+    def __get_config_setting(config, w):
+        for line in config:
+            if line[0] == w['name']:
+                return True if line[1] == 'True' else False
+        else:
+            return w['default']
 
     def __on_closing(self):
         if self.instance_changes:
@@ -80,6 +96,8 @@ class Gui:
                         return
                     elif response:
                         self.__save_flags()
+        if 'window_flags' in self.components.keys():
+            self.components['window_flags'].destroy()
         self.root.destroy()
 
     def __init_menu(self):
@@ -97,32 +115,42 @@ class Gui:
         self.root.config(menu=menubar)
 
     def __open_flag_settings(self):
-        if 'window_flags' not in self.components.keys() or not self.components['window_flags'].state() == 'normal':
-            window_flags = Tk()
+        if 'window_flags' not in self.components.keys():
+            window_flags = Toplevel(self.root)
+            window_flags.grab_set()
             window_flags.title("flags")
             window_flags.geometry("270x350")
             window_flags.minsize(width=200, height=200)
+            window_flags.attributes('-toolwindow', True)
+            window_flags.protocol("WM_DELETE_WINDOW", self.__window_flags_closing)
 
             v = []
             Button(window_flags, text='set', command=lambda: self.__set_flags(v)).pack(side=BOTTOM, anchor='e')
             for i, w in enumerate(self.packing['list']):
-                row = Frame(window_flags)
-                Label(row, text=w['name']).pack(side=LEFT)
+                if w['operable']:
+                    row = Frame(window_flags)
+                    Label(row, text=w['name']).pack(side=LEFT)
+                    v.append({'idx': i, 'var': StringVar(row)})
+                    val = 'True{}' if w['flag'] else 'False{}'
+                    v[-1]['var'].set(val.format('(default)' if w['flag'] == w['default'] else ''))
+                    choices = ['True(default)' if w['default'] else 'True',
+                               'False(default)' if not w['default'] else 'False']
+                    opt = OptionMenu(row, v[-1]['var'], *choices)
+                    opt.config(width=12)
+                    opt.pack(side=RIGHT)
 
-                v.append({'idx': i, 'var': StringVar(row)})
-                v[-1]['var'].set(str(w['flag']))
-                choices = ['True(default)' if w['default'] else 'True',
-                           'False(default)' if not w['default'] else 'False']
-                opt = OptionMenu(row, v[-1]['var'], *choices)
-                opt.config(width=12)
-                opt.pack(side=RIGHT)
-
-                row.pack(side=TOP, fill=X)
-                Frame(window_flags, height=2, borderwidth=1, relief=GROOVE).pack(side=TOP, fill=X)
-
-            window_flags.mainloop()
+                    row.pack(side=TOP, fill=X)
+                    Frame(window_flags, height=2, borderwidth=1, relief=GROOVE).pack(side=TOP, fill=X)
 
             self.components['window_flags'] = window_flags
+            window_flags.mainloop()
+
+        elif not self.components['window_flags'].state() == 'normal':
+            self.components['window_flags'].deiconify()
+
+    def __window_flags_closing(self):
+        self.components['window_flags'].withdraw()
+        self.components['window_flags'].grab_release()
 
     def __set_flags(self, v):
         for d in v:
@@ -134,7 +162,8 @@ class Gui:
     def __save_flags(self):
         file = open('shell.config', 'w+')
         for w in self.packing['list']:
-            file.write(w['name'] + '=' + str(w['flag']) + '\n')
+            if w['flag'] != w['default']:
+                file.write(w['name'] + '=' + str(w['flag']) + '\n')
 
     def __init_debug(self):
         frame_debug = Frame(self.root)
@@ -222,7 +251,7 @@ class Gui:
 
     def __connect_to_users(self):
         child_id = self.__provide_child_id()
-        self.children[child_id] = BlockGenerator()
+        self.children[child_id] = BlockGenerator()  # TODO connect to user based on config
         self.children[child_id].connect_to_gui(self, child_id)
 
     def __set_flag(self, widget, state):
@@ -304,11 +333,30 @@ class Gui:
             widget.xview_moveto(1.0)
             self.components['btn_generate'].config(state='normal')
 
+    @staticmethod
+    def interpret_file(file, delimiter=None, quotechar=None):
+        """
+
+        :return:
+        """
+        raw_file = open(file, 'r', newline='')
+        eval_buffer = []
+        for line in raw_file.readlines():
+            if line.strip(' \t\r\n') and line[0] != '@':
+                eval_buffer.append(line)
+        interpreted_file = csv.reader(eval_buffer, delimiter=delimiter, quotechar=quotechar, skipinitialspace=True)
+        return interpreted_file
+
+    @staticmethod
+    def get_timestamp():
+        return datetime.now().strftime('_%Y-%m-%d_%Hh%M')
+
 
 class BlockGenerator:
     """
 
     """
+
     def __init__(self):
         self.source_file: str = ''
         self.output_file: str = 'output.txt'
@@ -323,20 +371,6 @@ class BlockGenerator:
             command=lambda: self.generate_blocks(self.parent.components['entry_new_path'].get()))
         self.parent.root.title("Block Generator")
 
-    @staticmethod
-    def interpret_file(file):
-        """
-
-        :return:
-        """
-        raw_file = open(file, 'r', newline='')
-        eval_buffer = []
-        for line in raw_file.readlines():
-            if line.strip(' \t\r\n') and line[0] != '@':
-                eval_buffer.append(line)
-        interpreted_file = csv.reader(eval_buffer, delimiter=';', quotechar='"', skipinitialspace=True)
-        return interpreted_file
-
     def generate_blocks(self, source_file):
         """
 
@@ -347,8 +381,8 @@ class BlockGenerator:
         self.source_file = source_file
 
         raw_output = open(self.output_file, 'w+')
-        deviations = self.interpret_file(self.deviations_file)
-        list_tags = [] if self.parent.DEBUG_MODE else self.interpret_file(source_file)
+        deviations = self.parent.interpret_file(self.deviations_file, ';', '"')
+        list_tags = [] if self.parent.DEBUG_MODE else self.parent.interpret_file(source_file, ';', '"')
 
         for line in deviations:
             self.parent.components['txt_log'].config(state='normal')
@@ -361,10 +395,6 @@ class BlockGenerator:
         #     pass
 
         self.parent.components['lbl_progress'].config(text='Idle')
-
-
-def get_timestamp():
-    return datetime.now().strftime('_%Y-%m-%d_%Hh%M')
 
 
 def main():
