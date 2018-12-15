@@ -20,6 +20,7 @@ class Gui:
         self.root.geometry("400x400")
         self.root.minsize(width=200, height=200)
         self.root.protocol("WM_DELETE_WINDOW", self.__on_closing)
+        # TODO control opening position of windows
 
         # Declarations
         self.DEBUG_MODE = False
@@ -28,6 +29,7 @@ class Gui:
         self._next_child_id = 0
         self.components = {}
         self.instance_changes = []
+        self.config_file = 'shell.config'
 
         # Initializations
         self.__init_menu()
@@ -38,6 +40,7 @@ class Gui:
         self.__init_frame_tabs()
         self.__init_frame_search()
         self.__set_pack_order()
+        self.__read_config_settings()
         self.__repack()
         self.__connect_to_users()
         self.root.mainloop()
@@ -46,6 +49,7 @@ class Gui:
         separator = Frame(height=2, borderwidth=1, relief=GROOVE)
 
         # Order in pack_list determines order in root
+        # TODO look into using an ordered dict
         self.packing = {
             'list': [
                 {'name': 'frame_progress', 'widget': self.components['frame_progress'],
@@ -74,19 +78,49 @@ class Gui:
                 'frame_tab': 6
             }
         }
-        config = self.interpret_file('shell.config', '=') if os.path.isfile('shell.config') else []
+        config = self.interpret_file(self.config_file, '=') if os.path.isfile(self.config_file) else []
         for w in self.packing['list']:
-            w['flag'] = self.__get_config_setting(config, w)
+            val = self.__read_config_flags(config, w['name'])
+            w['flag'] = val if val is not None else w['default']
+
+    def __read_config_settings(self):
+        config = self.interpret_file(self.config_file, '=') if os.path.isfile(self.config_file) else []
+        # TODO whitelist which parameters can be set by configuration file
+        for c in config:
+            try:
+                address = c[0].split('.')
+                if len(address) == 1:
+                    self.components[address[0]] = c[1]
+                elif len(address) == 2:
+                    # TODO flags should be set like this
+                    # if address[1] == 'flag':
+                    #     self.components[address[0]][address[1]] = c[1]
+                    if address[1] == 'set':
+                        self.components[address[0]].set(c[1])
+                        if address[0] == 'entry_path_text':
+                            if os.path.isfile(self.config_file):
+                                self.components['btn_generate'].config(state='normal')
+
+            except:  # TODO handle key errors
+                pass
 
     @staticmethod
-    def __get_config_setting(config, w):
+    def __read_config_flags(config, name):
         for line in config:
-            if line[0] == w['name']:
-                return True if line[1] == 'True' else False
-        else:
-            return w['default']
+            if line[0] == name + '.flag':
+                if line[1] == 'True':
+                    return True
+                elif line[1] == 'False':
+                    return False
 
     def __on_closing(self):
+        self.__save()
+        if 'window_flags' in self.components.keys():
+            self.components['window_flags'].destroy()
+        self.root.destroy()
+
+    def __save(self):
+        file = open(self.config_file, 'w+')
         if self.instance_changes:
             for item in self.instance_changes:
                 if item == 'flags_changed':
@@ -95,10 +129,15 @@ class Gui:
                     if response is None:
                         return
                     elif response:
-                        self.__save_flags()
-        if 'window_flags' in self.components.keys():
-            self.components['window_flags'].destroy()
-        self.root.destroy()
+                        self.__save_flags(file)
+        if os.path.isfile(self.components['entry_new_path'].get()):
+            file.write('entry_path_text.set=' + self.components['entry_path_text'].get() + '\n')
+        file.close()
+
+    def __save_flags(self, file):
+        for w in self.packing['list']:
+            if w['flag'] != w['default']:
+                file.write(w['name'] + '.flag=' + str(w['flag']) + '\n')
 
     def __init_menu(self):
         menubar = Menu(self.root)
@@ -159,12 +198,6 @@ class Gui:
         if 'flags_changed' not in self.instance_changes:
             self.instance_changes.append('flags_changed')
 
-    def __save_flags(self):
-        file = open('shell.config', 'w+')
-        for w in self.packing['list']:
-            if w['flag'] != w['default']:
-                file.write(w['name'] + '=' + str(w['flag']) + '\n')
-
     def __init_debug(self):
         frame_debug = Frame(self.root)
         lbl_debug = Label(frame_debug, text="DEBUG MODE", fg="red")
@@ -175,10 +208,12 @@ class Gui:
 
     def __init_frame_source(self):
         frame_source = Frame(self.root)
-        entry_new_path = Entry(frame_source)
+        self.components['entry_path_text'] = StringVar()
+        entry_new_path = Entry(frame_source,
+                               textvariable=self.components['entry_path_text'])
         btn_set_directory = Button(frame_source,
                                    text="Set source",
-                                   command=lambda: self.__set_directory(entry_new_path))
+                                   command=self.__set_directory)
         entry_new_path.bind(sequence='<KeyRelease>', func=self.__path_keypress)
 
         btn_set_directory.pack(side=LEFT, padx=5, pady=5)
@@ -319,7 +354,7 @@ class Gui:
         self.components['btn_generate'].config(
             state='normal' if os.path.isfile(self.components['entry_new_path'].get()) else 'disabled')
 
-    def __set_directory(self, widget):
+    def __set_directory(self):
         """
         Select directory for files.
 
@@ -328,9 +363,8 @@ class Gui:
         response = filedialog.askopenfilename(
             title="Select file", filetypes=(("Taglist", "*.csv"), ("all files", "*.*")))
         if response != '':
-            widget.delete(0, END)
-            widget.insert(0, response)
-            widget.xview_moveto(1.0)
+            self.components['entry_path_text'].set(response)
+            # widget.xview_moveto(1.0)
             self.components['btn_generate'].config(state='normal')
 
     @staticmethod
