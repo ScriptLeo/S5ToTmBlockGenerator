@@ -2,8 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/../FileWatch/.idea/FileWatch.iml" filepath="$PROJECT_DIR$/../FileWatch/.idea/FileWatch.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/S5ToTmBlockGenerator.iml" filepath="$PROJECT_DIR$/.idea/S5ToTmBlockGenerator.iml" />
+      <module fileurl="file://H://TacoShell/.idea/TacoShell.iml" filepath="H://TacoShell/.idea/TacoShell.iml" />
     </modules>
   </component>
 </project>
