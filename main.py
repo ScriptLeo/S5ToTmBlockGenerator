@@ -20,7 +20,7 @@ class TacoShell:
         self.root.title("Shell GUI")
         self.root.minsize(width=200, height=200)
         self.root.protocol("WM_DELETE_WINDOW", self.__on_closing)
-        self.__position_window(self.root, 300, 300)
+        self.__position_window(self.root, 400, 350)
 
         # Declarations
         self.DEBUG_MODE = False
@@ -42,7 +42,7 @@ class TacoShell:
         self.__set_pack_order()
         self.__read_config_settings()
         self.__repack()
-        self.__connect_to_users()
+        self.__get_ingredients()
         self.root.mainloop()
 
     @staticmethod
@@ -300,12 +300,12 @@ class TacoShell:
         self._next_child_id += 1
         return str(self._next_child_id)
 
-    def __connect_to_users(self):
+    def __get_ingredients(self):
         child_id = self.__provide_child_id()
         module = import_module('blockgenerator')
         instance = module.make_taco()
         self.children[child_id] = instance  # BlockGenerator()  # TODO connect to user based on config
-        self.children[child_id].connect_to_gui(self, child_id)
+        self.children[child_id].eat_taco(self, child_id)
 
     def __set_flag(self, widget, state):
         self.packing['list'][self.packing['indices'][widget]]['flag'] = state

@@ -10,7 +10,7 @@ class BlockGenerator:
         self.parent = None
         self.child_id = None
 
-    def connect_to_gui(self, parent, child_id):
+    def eat_taco(self, parent, child_id):
         self.child_id = child_id
         self.parent = parent
         self.parent.components['btn_generate'].config(
