@@ -6,9 +6,10 @@ import os
 import logging
 from datetime import datetime
 import traceback
+from importlib import import_module
 
 
-class Gui:
+class TacoShell:
     """
 
     """
@@ -17,10 +18,9 @@ class Gui:
         # ROOT
         self.root = Tk()
         self.root.title("Shell GUI")
-        self.root.geometry("400x400")
         self.root.minsize(width=200, height=200)
         self.root.protocol("WM_DELETE_WINDOW", self.__on_closing)
-        # TODO control opening position of windows
+        self.__position_window(self.root, 300, 300)
 
         # Declarations
         self.DEBUG_MODE = False
@@ -44,6 +44,18 @@ class Gui:
         self.__repack()
         self.__connect_to_users()
         self.root.mainloop()
+
+    @staticmethod
+    def __position_window(window, window_width, window_height, x=None, y=None):
+        screen_width = window.winfo_screenwidth()
+        screen_height = window.winfo_screenheight()
+        if x is None:
+            x = int((screen_width / 2) - (window_width / 2))
+        if y is None:
+            y = int((screen_height / 2) - (window_height / 2))
+        window.geometry("{}x{}+{}+{}".format(window_width, window_height,
+                                             max(min(x, screen_width - 100), 20),
+                                             max(min(y, screen_height - 100), 20)))
 
     def __set_pack_order(self):
         separator = Frame(height=2, borderwidth=1, relief=GROOVE)
@@ -158,7 +170,8 @@ class Gui:
             window_flags = Toplevel(self.root)
             window_flags.grab_set()
             window_flags.title("flags")
-            window_flags.geometry("270x350")
+            self.__position_window(window_flags, 270, 350,
+                                   self.root.winfo_rootx() + 50, self.root.winfo_rooty() + 50)
             window_flags.minsize(width=200, height=200)
             window_flags.attributes('-toolwindow', True)
             window_flags.protocol("WM_DELETE_WINDOW", self.__window_flags_closing)
@@ -186,6 +199,9 @@ class Gui:
 
         elif not self.components['window_flags'].state() == 'normal':
             self.components['window_flags'].deiconify()
+            self.components['window_flags'].grab_set()
+            self.__position_window(self.components['window_flags'], 270, 350,
+                                   self.root.winfo_rootx() + 50, self.root.winfo_rooty() + 50)
 
     def __window_flags_closing(self):
         self.components['window_flags'].withdraw()
@@ -286,7 +302,9 @@ class Gui:
 
     def __connect_to_users(self):
         child_id = self.__provide_child_id()
-        self.children[child_id] = BlockGenerator()  # TODO connect to user based on config
+        module = import_module('blockgenerator')
+        instance = module.make_taco()
+        self.children[child_id] = instance  # BlockGenerator()  # TODO connect to user based on config
         self.children[child_id].connect_to_gui(self, child_id)
 
     def __set_flag(self, widget, state):
@@ -386,54 +404,9 @@ class Gui:
         return datetime.now().strftime('_%Y-%m-%d_%Hh%M')
 
 
-class BlockGenerator:
-    """
-
-    """
-
-    def __init__(self):
-        self.source_file: str = ''
-        self.output_file: str = 'output.txt'
-        self.deviations_file: str = 'blockdefs/@deviations.csv'
-        self.parent: Gui = None
-        self.child_id = None
-
-    def connect_to_gui(self, parent, child_id):
-        self.child_id = child_id
-        self.parent = parent
-        self.parent.components['btn_generate'].config(
-            command=lambda: self.generate_blocks(self.parent.components['entry_new_path'].get()))
-        self.parent.root.title("Block Generator")
-
-    def generate_blocks(self, source_file):
-        """
-
-        :param source_file:
-        :return:
-        """
-        self.parent.components['lbl_progress'].config(text='Processing')
-        self.source_file = source_file
-
-        raw_output = open(self.output_file, 'w+')
-        deviations = self.parent.interpret_file(self.deviations_file, ';', '"')
-        list_tags = [] if self.parent.DEBUG_MODE else self.parent.interpret_file(source_file, ';', '"')
-
-        for line in deviations:
-            self.parent.components['txt_log'].config(state='normal')
-            self.parent.components['txt_log'].insert('end', ''.join(line) + '\n')
-            # self.gui_handle.txt_log.tag_add('red', )  # TODO add colored text support
-            self.parent.components['txt_log'].config(state='disabled')
-
-        # idx_of_MKZ = list_tags[0].index('Type')
-        # for line_data in list_tags[1:]:
-        #     pass
-
-        self.parent.components['lbl_progress'].config(text='Idle')
-
-
 def main():
     try:
-        Gui()
+        TacoShell()
 
     except:
         traceback.print_exc()
