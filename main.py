@@ -9,14 +9,10 @@ import traceback
 from importlib import import_module
 import xml.etree.cElementTree as ET
 from xml.dom.minidom import parseString
+from collections import OrderedDict
 
 
 class TacoShell:
-    # TODO create absorb module functionality
-    """
-
-    """
-
     def __init__(self):
         # ROOT
         self.root = Tk()
@@ -26,7 +22,6 @@ class TacoShell:
         self.__position_window(self.root, 400, 350)
 
         # Declarations
-        self.DEBUG_MODE = False
         self.help_text = "This won't help you at all.."
         self.about_text = "TacoShell v 0.1\nby Eivind Brate Midtun"
         self.children = {}
@@ -44,8 +39,9 @@ class TacoShell:
         self.__init_frame_progress()
         self.__init_frame_tabs()
         self.__init_frame_search()
-        self.__set_pack_order()
-        self.__read_from_xml()
+        self.__init_other()
+        self.__set_packing()
+        self.__read_xml_config()
         self.__repack()
         self.root.mainloop()
 
@@ -61,16 +57,30 @@ class TacoShell:
                                              max(min(x, screen_width - 100), 20),
                                              max(min(y, screen_height - 100), 20)))
 
-    def __set_pack_order(self):
-        separator = Frame(height=2, borderwidth=1, relief=GROOVE)
-
-        # Order in pack_list determines order in root
-        # TODO look into using an ordered dict
+    def __set_packing(self):
+        """Order in components['packing'] determines order in which widgets are packed to root"""
+        # TODO migrate to the OrderedDict
+        self.components['packing'] = OrderedDict([
+            ('frame_progress', {'widget': self.components['frame_progress'],
+                                'side': BOTTOM, 'fill': X, 'default': True}),
+            ('separator', {'widget': self.components['separator'],
+                           'side': BOTTOM, 'fill': X, 'pady': (3, 0), 'default': True}),
+            ('frame_generate', {'widget': self.components['frame_generate'],
+                                'side': BOTTOM, 'fill': X, 'default': True}),
+            ('frame_debug', {'widget': self.components['frame_debug'],
+                             'side': TOP, 'fill': X, 'default': False}),
+            ('frame_source', {'widget': self.components['frame_source'],
+                              'side': TOP, 'fill': X, 'default': True}),
+            ('frame_search', {'widget': self.components['frame_search'],
+                              'side': TOP, 'fill': X, 'default': False}),
+            ('frame_tabs', {'widget': self.components['frame_tabs'],
+                            'side': TOP, 'fill': BOTH, 'expand': YES, 'default': True})
+        ])
         self.packing = {
             'list': [
                 {'name': 'frame_progress', 'widget': self.components['frame_progress'],
                  'side': BOTTOM, 'fill': X, 'default': True, 'operable': True},
-                {'name': 'separator', 'widget': separator,
+                {'name': 'separator', 'widget': self.components['separator'],
                  'side': BOTTOM, 'fill': X, 'pady': (3, 0), 'default': True, 'operable': True},
                 {'name': 'frame_generate', 'widget': self.components['frame_generate'],
                  'side': BOTTOM, 'fill': X, 'default': True, 'operable': True},
@@ -104,25 +114,25 @@ class TacoShell:
         self.root.destroy()
 
     @staticmethod
-    def __b(string):
+    def __bool(string):
         """Converts string to boolean"""
         return True if string == 'True' else False
 
-    def __read_from_xml(self):
+    def __read_xml_config(self):
         tree = ET.parse(self.config_file)
         mod_node = tree.find('mods')
         flags_node = tree.find('flags')
         paths_node = tree.find('paths')
 
         for child in mod_node:
-            mod = {'name': child.tag, 'value': self.__b(child.text), 'default': False}
+            mod = {'name': child.tag, 'value': self.__bool(child.text), 'default': False}
             self.mod_list.append(mod)
             self.__get_ingredients(mod)
 
         for child in flags_node:
             if child.tag in self.packing['indices']:
                 pack = self.packing['list'][self.packing['indices'][child.tag]]
-                pack['flag'] = self.__b(child.text)
+                pack['flag'] = self.__bool(child.text)
                 if pack['name'] == 'frame_debug':
                     self.__toggle_debug(pack['flag'])
 
@@ -199,28 +209,6 @@ class TacoShell:
         for w in self.packing['list']:
             if w['flag'] != w['default']:
                 file.write(w['name'] + '.flag=' + str(w['flag']) + '\n')
-
-    def __init_menu(self):
-        menubar = Menu(self.root)
-
-        # Cascade options
-        menu_options = Menu(menubar, tearoff=0)
-        menu_options.add_command(label="help", command=self.menu_help)
-        menu_options.add_command(label="about", command=self.__menu_about)
-
-        # Add to menubar
-        menubar.add_cascade(label="options", menu=menu_options)
-        menubar.add_command(label="flags", command=self.__open_flag_settings)
-        v = []
-        menubar.add_command(label="mods",
-                            command=lambda: self.__open_tool_window(
-                                window_key='window_mods',
-                                v=v,
-                                title='mods',
-                                table=self.mod_list,
-                                actions=[{'text': 'set', 'command': lambda: self.__install_mod(v)},
-                                         {'text': 'add', 'command': lambda: self.__add_mod(v)}]))
-        self.root.config(menu=menubar)
 
     def __open_flag_settings(self):
         if 'window_flags' not in self.components.keys():
@@ -342,6 +330,28 @@ class TacoShell:
         if 'flags_changed' not in self.instance_changes:
             self.instance_changes.append('flags_changed')
 
+    def __init_menu(self):
+        menubar = Menu(self.root)
+
+        # Cascade options
+        menu_options = Menu(menubar, tearoff=0)
+        menu_options.add_command(label="help", command=self.menu_help)
+
+        # Add to menubar
+        menu_options.add_command(label="about", command=self.__menu_about)
+        menubar.add_cascade(label="options", menu=menu_options)
+        menubar.add_command(label="flags", command=self.__open_flag_settings)
+        v = []
+        menubar.add_command(label="mods",
+                            command=lambda: self.__open_tool_window(
+                                window_key='window_mods',
+                                v=v,
+                                title='mods',
+                                table=self.mod_list,
+                                actions=[{'text': 'set', 'command': lambda: self.__install_mod(v)},
+                                         {'text': 'add', 'command': lambda: self.__add_mod(v)}]))
+        self.root.config(menu=menubar)
+
     def __init_debug(self):
         frame_debug = Frame(self.root)
 
@@ -351,7 +361,7 @@ class TacoShell:
 
         btn_test2 = Button(frame_debug,
                            text='read xml',
-                           command=self.__read_from_xml)
+                           command=self.__read_xml_config)
 
         btn_test3 = Button(frame_debug,
                            text='placeholder')
@@ -438,6 +448,9 @@ class TacoShell:
         self.components['frame_search'] = frame_search
         self.components['entry_search'] = entry_search
 
+    def __init_other(self):
+        self.components['separator'] = Frame(height=2, borderwidth=1, relief=GROOVE)
+
     def __provide_child_id(self):
         self._next_child_id += 1
         return str(self._next_child_id)
@@ -456,6 +469,7 @@ class TacoShell:
             print("Failed to add ingredient " + mod['name'])
 
     def __set_flag(self, widget, state):
+        # TODO update this to use OrderedDict and spread usage
         self.packing['list'][self.packing['indices'][widget]]['flag'] = state
 
     def __toggle_debug(self, state):
