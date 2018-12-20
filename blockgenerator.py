@@ -14,7 +14,7 @@ class BlockGenerator:
         self.child_id = child_id
         self.parent = parent
         self.parent.components['btn_generate'].config(
-            command=lambda: self.generate_blocks(self.parent.components['entry_new_path'].get()))
+            command=lambda: self.generate_blocks(self.parent.components['entry_path'].get()))
         self.parent.root.title("Block Generator")
 
     def generate_blocks(self, source_file):

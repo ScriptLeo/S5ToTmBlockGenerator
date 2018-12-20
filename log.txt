@@ -5,3 +5,21 @@ Traceback (most recent call last):
   File "H:/TacoShell/main.py", line 24, in __init__
     1/0
 ZeroDivisionError: division by zero
+12-17 10:46
+Traceback (most recent call last):
+  File "G:/TacoShell/main.py", line 476, in main
+    TacoShell()
+  File "G:/TacoShell/main.py", line 46, in __init__
+    self.__set_pack_order()
+  File "G:/TacoShell/main.py", line 99, in __set_pack_order
+    config.seek(0)
+AttributeError: '_csv.reader' object has no attribute 'seek'
+12-17 15:24
+Traceback (most recent call last):
+  File "G:/TacoShell/main.py", line 476, in main
+    TacoShell()
+  File "G:/TacoShell/main.py", line 48, in __init__
+    self.__repack()
+  File "G:/TacoShell/main.py", line 404, in __repack
+    if (s is None or s == w['side']) and w['flag']:
+KeyError: 'flag'

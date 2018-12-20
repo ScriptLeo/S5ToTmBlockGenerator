@@ -7,9 +7,12 @@ import logging
 from datetime import datetime
 import traceback
 from importlib import import_module
+import xml.etree.cElementTree as ET
+from xml.dom.minidom import parseString
 
 
 class TacoShell:
+    # TODO create absorb module functionality
     """
 
     """
@@ -25,11 +28,13 @@ class TacoShell:
         # Declarations
         self.DEBUG_MODE = False
         self.help_text = "This won't help you at all.."
+        self.about_text = "TacoShell v 0.1\nby Eivind Brate Midtun"
         self.children = {}
         self._next_child_id = 0
         self.components = {}
         self.instance_changes = []
-        self.config_file = 'shell.config'
+        self.config_file = 'shellconfig.xml'
+        self.mod_list = []
 
         # Initializations
         self.__init_menu()
@@ -40,9 +45,8 @@ class TacoShell:
         self.__init_frame_tabs()
         self.__init_frame_search()
         self.__set_pack_order()
-        self.__read_config_settings()
+        self.__read_from_xml()
         self.__repack()
-        self.__get_ingredients()
         self.root.mainloop()
 
     @staticmethod
@@ -87,64 +91,109 @@ class TacoShell:
                 'frame_debug': 3,
                 'frame_source': 4,
                 'frame_search': 5,
-                'frame_tab': 6
+                'frame_tabs': 6
             }
         }
-        config = self.interpret_file(self.config_file, '=') if os.path.isfile(self.config_file) else []
         for w in self.packing['list']:
-            val = self.__read_config_flags(config, w['name'])
-            w['flag'] = val if val is not None else w['default']
-
-    def __read_config_settings(self):
-        config = self.interpret_file(self.config_file, '=') if os.path.isfile(self.config_file) else []
-        # TODO whitelist which parameters can be set by configuration file
-        for c in config:
-            try:
-                address = c[0].split('.')
-                if len(address) == 1:
-                    self.components[address[0]] = c[1]
-                elif len(address) == 2:
-                    # TODO flags should be set like this
-                    # if address[1] == 'flag':
-                    #     self.components[address[0]][address[1]] = c[1]
-                    if address[1] == 'set':
-                        self.components[address[0]].set(c[1])
-                        if address[0] == 'entry_path_text':
-                            if os.path.isfile(self.config_file):
-                                self.components['btn_generate'].config(state='normal')
-
-            except:  # TODO handle key errors
-                pass
-
-    @staticmethod
-    def __read_config_flags(config, name):
-        for line in config:
-            if line[0] == name + '.flag':
-                if line[1] == 'True':
-                    return True
-                elif line[1] == 'False':
-                    return False
+            w['flag'] = w['default']
 
     def __on_closing(self):
-        self.__save()
+        self.__save_as_xml()
         if 'window_flags' in self.components.keys():
             self.components['window_flags'].destroy()
         self.root.destroy()
 
-    def __save(self):
-        file = open(self.config_file, 'w+')
-        if self.instance_changes:
-            for item in self.instance_changes:
-                if item == 'flags_changed':
-                    response = messagebox.askyesnocancel("Unsaved flag changes",
-                                                         "Do you to save flag settings before quitting?")
-                    if response is None:
-                        return
-                    elif response:
-                        self.__save_flags(file)
-        if os.path.isfile(self.components['entry_new_path'].get()):
-            file.write('entry_path_text.set=' + self.components['entry_path_text'].get() + '\n')
-        file.close()
+    @staticmethod
+    def __b(string):
+        """Converts string to boolean"""
+        return True if string == 'True' else False
+
+    def __read_from_xml(self):
+        tree = ET.parse(self.config_file)
+        mod_node = tree.find('mods')
+        flags_node = tree.find('flags')
+        paths_node = tree.find('paths')
+
+        for child in mod_node:
+            mod = {'name': child.tag, 'value': self.__b(child.text), 'default': False}
+            self.mod_list.append(mod)
+            self.__get_ingredients(mod)
+
+        for child in flags_node:
+            if child.tag in self.packing['indices']:
+                pack = self.packing['list'][self.packing['indices'][child.tag]]
+                pack['flag'] = self.__b(child.text)
+                if pack['name'] == 'frame_debug':
+                    self.__toggle_debug(pack['flag'])
+
+        for child in paths_node:
+            self.components[child.tag].set(child.text)
+
+    def __save_as_xml(self):
+        flag_data = []
+        for item in self.instance_changes:
+            if item == 'flags_changed':
+                response = messagebox.askyesno("Unsaved flag changes",
+                                               "Save flag settings?")
+                if response:
+                    for w in self.packing['list']:
+                        flag_data.append({'tag': w['name'], 'value': str(w['flag'])})
+
+        mod_data = []
+        for mod in self.mod_list:
+            mod_data.append({'tag': mod['name'], 'value': str(mod['value'])})
+
+        path_data = []
+        if os.path.isfile(self.components['entry_path_text'].get()):
+            path_str = self.components['entry_path_text'].get()
+            path_data.append({'tag': 'entry_path_text', 'value': path_str})
+
+        save_data = [
+            {'tag': 'mods', 'elements': mod_data},
+            {'tag': 'flags', 'elements': flag_data},
+            {'tag': 'paths', 'elements': path_data}
+        ]
+        self.__write_xml('shellconfig.xml', save_data)
+
+    @staticmethod
+    def __write_xml(file, data: list=None):
+        if data is None:
+            data = [
+                {'tag': 'OpcDataPoint',
+                 'elements': [
+                     {'tag': 'data_tag', 'value': 'some data'}
+                 ]*10
+                 }
+            ]*10
+
+        if os.path.isfile(file):
+            try:
+                tree = ET.parse(file)
+                root = tree.getroot()
+
+            except:
+                root = ET.Element('root')
+
+        else:
+            root = ET.Element('root')
+
+        for element in data:
+            child = root.find(element['tag'])
+            if child is None:
+                child = ET.SubElement(root, element['tag'])
+
+            for data_element in element['elements']:
+                sub_child = root.find(element['tag'] + '/' + data_element['tag'])
+                if sub_child is None:
+                    sub_child = ET.SubElement(child, data_element['tag'])
+
+                sub_child.text = data_element['value']
+
+        xml_str = str(ET.tostring(root), 'utf-8').replace('\n', '').replace('\t', '').encode('utf-8')
+        pretty_xml = parseString(xml_str).toprettyxml(newl='\n', indent="\t")
+        with open(file, 'w+') as f:
+            f.write(pretty_xml)
+            f.close()
 
     def __save_flags(self, file):
         for w in self.packing['list']:
@@ -156,13 +205,21 @@ class TacoShell:
 
         # Cascade options
         menu_options = Menu(menubar, tearoff=0)
-        menu_options.add_command(label="debug", command=self.__toggle_debug)
         menu_options.add_command(label="help", command=self.menu_help)
+        menu_options.add_command(label="about", command=self.__menu_about)
 
         # Add to menubar
         menubar.add_cascade(label="options", menu=menu_options)
         menubar.add_command(label="flags", command=self.__open_flag_settings)
-        menubar.add_command(label="addons")
+        v = []
+        menubar.add_command(label="mods",
+                            command=lambda: self.__open_tool_window(
+                                window_key='window_mods',
+                                v=v,
+                                title='mods',
+                                table=self.mod_list,
+                                actions=[{'text': 'set', 'command': lambda: self.__install_mod(v)},
+                                         {'text': 'add', 'command': lambda: self.__add_mod(v)}]))
         self.root.config(menu=menubar)
 
     def __open_flag_settings(self):
@@ -174,7 +231,7 @@ class TacoShell:
                                    self.root.winfo_rootx() + 50, self.root.winfo_rooty() + 50)
             window_flags.minsize(width=200, height=200)
             window_flags.attributes('-toolwindow', True)
-            window_flags.protocol("WM_DELETE_WINDOW", self.__window_flags_closing)
+            window_flags.protocol("WM_DELETE_WINDOW", lambda: self.__tool_window_closing(window_flags))
 
             v = []
             Button(window_flags, text='set', command=lambda: self.__set_flags(v)).pack(side=BOTTOM, anchor='e')
@@ -203,40 +260,125 @@ class TacoShell:
             self.__position_window(self.components['window_flags'], 270, 350,
                                    self.root.winfo_rootx() + 50, self.root.winfo_rooty() + 50)
 
-    def __window_flags_closing(self):
-        self.components['window_flags'].withdraw()
-        self.components['window_flags'].grab_release()
+    def __open_tool_window(self, window_key, v, title='tool', table: list=None, actions: list=None):
+        # TODO migrate __open_flag_settings users to this generic method
+        """
+        table in the format:
+        {'name': name, 'value': value handle, 'default': default}
+
+        :param window_key:
+        :param table:
+        :param action_method:
+        :return:
+        """
+        if window_key not in self.components.keys():
+            window = self.components[window_key] = Toplevel(self.root)
+            window.grab_set()
+            window.title(title)
+            self.__position_window(window, 270, 350,
+                                   self.root.winfo_rootx() + 50, self.root.winfo_rooty() + 50)
+            window.minsize(width=200, height=200)
+            window.attributes('-toolwindow', True)
+            window.protocol("WM_DELETE_WINDOW", lambda: self.__tool_window_closing(window))
+
+            frame_bottom = Frame(window)
+            for action in actions:
+                Button(frame_bottom, width=10, text=action['text'], command=action['command']).pack(side=RIGHT)
+            frame_bottom.pack(side=BOTTOM, fill=X)
+
+            for i, w in enumerate(table, start=0):
+                self.__add_row(window, v, w, i)
+
+        elif not self.components[window_key].state() == 'normal':
+            w = self.components[window_key]
+            w.deiconify()
+            w.grab_set()
+            self.__position_window(w, 270, 350, self.root.winfo_rootx() + 50, self.root.winfo_rooty() + 50)
+
+    @staticmethod
+    def __add_row(window, v, w, i):
+        row = Frame(window)
+        Label(row, text=w['name']).pack(side=LEFT)
+        v.append({'idx': i, 'var': StringVar(row)})
+        val = 'True{}' if w['value'] else 'False{}'
+        v[-1]['var'].set(val.format('(default)' if w['value'] == w['default'] else ''))
+        choices = ['True(default)' if w['default'] else 'True',
+                   'False(default)' if not w['default'] else 'False']
+        opt = OptionMenu(row, v[-1]['var'], *choices)
+        opt.config(width=12)
+        opt.pack(side=RIGHT)
+
+        row.pack(side=TOP, fill=X)
+        Frame(window, height=2, borderwidth=1, relief=GROOVE).pack(side=TOP, fill=X)
+
+    def __add_mod(self, v):
+        response = filedialog.askopenfilename(
+            title="Select file", filetypes=(("mod file", "*.py"), ("all files", "*.*")))
+        if response != '':
+            filename_w_ext = os.path.basename(response)
+            filename, _ = os.path.splitext(filename_w_ext)
+            mod = {'name': filename, 'value': False, 'default': False}
+            self.mod_list.append(mod)
+            self.__add_row(self.components['window_mods'], v, mod, len(self.mod_list)-1)
+            print("added mod: " + mod['name'])
+
+    def __install_mod(self, v):
+        for d in v:
+            self.mod_list[d['idx']]['value'] = True if d['var'].get() in ('True', 'True(default)') else False
+        for mod in self.mod_list:
+            self.__get_ingredients(mod)
+
+    @staticmethod
+    def __tool_window_closing(handle):
+        handle.withdraw()
+        handle.grab_release()
 
     def __set_flags(self, v):
         for d in v:
             self.packing['list'][d['idx']]['flag'] = True if d['var'].get() in ('True', 'True(default)') else False
+            if self.packing['list'][d['idx']]['name'] == 'frame_debug':
+                self.__toggle_debug(self.packing['list'][d['idx']]['flag'])
         self.__repack()
         if 'flags_changed' not in self.instance_changes:
             self.instance_changes.append('flags_changed')
 
     def __init_debug(self):
         frame_debug = Frame(self.root)
+
+        btn_test = Button(frame_debug,
+                          text='save xml',
+                          command=self.__save_as_xml)
+
+        btn_test2 = Button(frame_debug,
+                           text='read xml',
+                           command=self.__read_from_xml)
+
+        btn_test3 = Button(frame_debug,
+                           text='placeholder')
+
         lbl_debug = Label(frame_debug, text="DEBUG MODE", fg="red")
 
         lbl_debug.pack(side=RIGHT)
+        btn_test.pack(side=LEFT)
+        btn_test2.pack(side=LEFT)
+        btn_test3.pack(side=LEFT)
 
         self.components['frame_debug'] = frame_debug
 
     def __init_frame_source(self):
         frame_source = Frame(self.root)
         self.components['entry_path_text'] = StringVar()
-        entry_new_path = Entry(frame_source,
-                               textvariable=self.components['entry_path_text'])
+        entry_path = Entry(frame_source, textvariable=self.components['entry_path_text'])
         btn_set_directory = Button(frame_source,
                                    text="Set source",
                                    command=self.__set_directory)
-        entry_new_path.bind(sequence='<KeyRelease>', func=self.__path_keypress)
+        entry_path.bind(sequence='<KeyRelease>', func=self.__path_keypress)
 
         btn_set_directory.pack(side=LEFT, padx=5, pady=5)
-        entry_new_path.pack(side=LEFT, fill=X, expand=YES, padx=5)
+        entry_path.pack(side=LEFT, fill=X, expand=YES, padx=5)
 
         self.components['frame_source'] = frame_source
-        self.components['entry_new_path'] = entry_new_path
+        self.components['entry_path'] = entry_path
         self.components['btn_set_directory'] = btn_set_directory
 
     def __init_frame_generate(self):
@@ -300,31 +442,30 @@ class TacoShell:
         self._next_child_id += 1
         return str(self._next_child_id)
 
-    def __get_ingredients(self):
+    def __get_ingredients(self, mod):
         child_id = self.__provide_child_id()
-        module = import_module('blockgenerator')
-        instance = module.make_taco()
-        self.children[child_id] = instance  # BlockGenerator()  # TODO connect to user based on config
-        self.children[child_id].eat_taco(self, child_id)
+        try:
+            if mod['value']:
+                module = import_module(mod['name'])
+                instance = module.make_taco()
+                self.children[child_id] = instance
+                self.children[child_id].eat_taco(self, child_id)
+                print("Added " + mod['name'] + " to taco")
+
+        except:
+            print("Failed to add ingredient " + mod['name'])
 
     def __set_flag(self, widget, state):
         self.packing['list'][self.packing['indices'][widget]]['flag'] = state
 
-    def __toggle_debug(self):
-        if self.DEBUG_MODE:
-            self.DEBUG_MODE = False
-            self.__set_flag('frame_debug', False)
-            if not os.path.isfile(self.components['entry_new_path'].get()):
-                self.components['btn_generate'].config(state='disabled')
-            self.components['txt_log'].config(state='disabled')
-            self.__repack(TOP)
-
-        else:
-            self.DEBUG_MODE = True
-            self.__set_flag('frame_debug', True)
+    def __toggle_debug(self, state):
+        if state:
             self.components['btn_generate'].config(state='normal')
             self.components['txt_log'].config(state='normal')
-            self.__repack(TOP)
+        else:
+            if not os.path.isfile(self.components['entry_path'].get()):
+                self.components['btn_generate'].config(state='disabled')
+            self.components['txt_log'].config(state='disabled')
 
     @staticmethod
     def __val(d, key):
@@ -348,6 +489,9 @@ class TacoShell:
     def menu_help(self):
         messagebox.showinfo("Help", self.help_text)
 
+    def __menu_about(self):
+        messagebox.showinfo("About", self.about_text)
+
     def __search_keypress(self, _):
         text: str = self.components['txt_log'].get('1.0', 'end-1c')
         text_array = text.splitlines()
@@ -370,7 +514,7 @@ class TacoShell:
 
     def __path_keypress(self, _):
         self.components['btn_generate'].config(
-            state='normal' if os.path.isfile(self.components['entry_new_path'].get()) else 'disabled')
+            state='normal' if os.path.isfile(self.components['entry_path'].get()) else 'disabled')
 
     def __set_directory(self):
         """
@@ -382,7 +526,6 @@ class TacoShell:
             title="Select file", filetypes=(("Taglist", "*.csv"), ("all files", "*.*")))
         if response != '':
             self.components['entry_path_text'].set(response)
-            # widget.xview_moveto(1.0)
             self.components['btn_generate'].config(state='normal')
 
     @staticmethod
