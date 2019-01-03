@@ -1,9 +1,0 @@
-@This file contains the lookup for which definition is associated with which block type
-@"Block type"; "Definition file"
-"AKS"; "AKS.def"
-"AM5S"; "AM5S.def"
-"AMS"; "AMS.def"
-"DM5S"; "DM5S.def"
-"DMS"; "DMS.def"
-"S5S"; "S5S.def"
-"SVS"; "SVS.def"

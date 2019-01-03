@@ -3,18 +3,25 @@
     <words>
       <w>addon</w>
       <w>addons</w>
+      <w>alarmlist</w>
       <w>asctime</w>
       <w>blockdefs</w>
       <w>brate</w>
+      <w>defs</w>
       <w>dropdown</w>
       <w>eivind</w>
       <w>hori</w>
       <w>hotkeys</w>
+      <w>lightgray</w>
+      <w>lighttext</w>
       <w>menubar</w>
       <w>midtun</w>
+      <w>milddark</w>
       <w>padx</w>
       <w>pady</w>
       <w>quotechar</w>
+      <w>tabactive</w>
+      <w>tablazy</w>
       <w>taglist</w>
       <w>tkvar</w>
       <w>toolwindow</w>
