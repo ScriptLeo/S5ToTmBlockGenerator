@@ -1,5 +1,5 @@
 from tkinter import Tk, filedialog, messagebox, Text, Menu, LEFT, RIGHT, TOP, BOTTOM, BOTH, YES, X, Y, \
-    Toplevel, StringVar, BooleanVar, HORIZONTAL, VERTICAL, GROOVE, CENTER
+    Toplevel, StringVar, BooleanVar, HORIZONTAL, VERTICAL, GROOVE, CENTER, END
 from tkinter import Label as TkLabel, Button as TkButton
 from tkinter.ttk import Button, Progressbar, Notebook, Style, Entry, OptionMenu, Frame, Scrollbar, Label
 from PIL.ImageTk import PhotoImage
@@ -14,6 +14,7 @@ from importlib import import_module
 import xml.etree.cElementTree as ET
 from xml.dom.minidom import parseString
 from collections import OrderedDict
+from time import time
 
 
 class TacoShell:
@@ -27,6 +28,7 @@ class TacoShell:
         self.__position_window(self.root, 400, 350)
 
         # Declarations
+        self.progress_update_cycle = 1/10
         self.debug_mode = False
         self.override = False
         self.help_text = "This won't help you at all.."
@@ -41,6 +43,7 @@ class TacoShell:
         self.colors = {}
         self.icons = {}
         self.style = Style()
+        self.init_summary = []
 
         # Initializations
         self.__init_appearance()
@@ -55,7 +58,12 @@ class TacoShell:
         self.__read_xml_config()
         self.__set_theme()
         self.__repack()
+        self.__initialization_summary()
         self.root.mainloop()
+
+    def __initialization_summary(self):
+        for ele in self.init_summary:
+            self.write_to_log(ele, 'bad')
 
     def __on_error(self, *args):
         try:
@@ -75,21 +83,32 @@ class TacoShell:
 
         self.font_colors = {'normal': '#A9B7C6',
                             'highlighted': '#A35E9C',
-                            'bad': '#DE553F'}
+                            'bad': '#DE553F',
+                            'good': '#00AA00'}
 
-        try:
-            default_icon_size = (35, 35)
-            default_mini_icon_size = (20, 20)
-            self.icons['save'] = PhotoImage(Image.open("resources/save.png").resize(default_mini_icon_size, ANTIALIAS))
-            self.icons['revert'] = PhotoImage(Image.open("resources/revert.png").resize(default_mini_icon_size, ANTIALIAS))
-            self.icons['close'] = PhotoImage(Image.open("resources/close.png").resize(default_mini_icon_size, ANTIALIAS))
-            self.icons['browse_excel'] = PhotoImage(Image.open("resources/browse_excel.png").resize(default_icon_size, ANTIALIAS))
-            self.icons['browse'] = PhotoImage(Image.open("resources/browse.png").resize((100, 100), ANTIALIAS))
-            self.icons['play'] = PhotoImage(Image.open("resources/play.png").resize(default_icon_size, ANTIALIAS))
-            self.icons['switch_on'] = PhotoImage(Image.open("resources/switch_on.png").resize((30, 15), ANTIALIAS))
-            self.icons['switch_off'] = PhotoImage(Image.open("resources/switch_off.png").resize((30, 15), ANTIALIAS))
-        except:
-            pass
+        default_medium_icon_size = (35, 35)
+        default_mini_icon_size = (20, 20)
+        icons = [{'name': 'save', 'size': default_mini_icon_size},
+                 {'name': 'revert', 'size': default_mini_icon_size},
+                 {'name': 'close', 'size': default_mini_icon_size},
+                 {'name': 'browse_excel', 'size': default_medium_icon_size},
+                 {'name': 'browse', 'size': (100, 100)},
+                 {'name': 'play', 'size': default_medium_icon_size},
+                 {'name': 'stop', 'size': default_mini_icon_size},
+                 {'name': 'switch_on', 'size': (30, 15)},
+                 {'name': 'switch_off', 'size': (30, 15)}]
+        missing_icons = []
+
+        for icon in icons:
+            try:
+                self.icons[icon['name']] = PhotoImage(
+                    Image.open('resources/' + icon['name'] + '.png').resize(icon['size'], ANTIALIAS))
+            except FileNotFoundError:
+                self.icons[icon['name']] = PhotoImage(Image.new("RGB", icon['size'], "white"))
+                missing_icons.append(icon['name'] + '.png')
+
+        if missing_icons:
+            self.init_summary.append('Missing icon(s) in resources/ folder: ' + ', '.join(missing_icons))
 
     def __set_theme(self):
         self.style.theme_use('clam')
@@ -183,6 +202,7 @@ class TacoShell:
         """Converts string to boolean"""
         return True if string == 'True' else False
 
+    """XML read/write"""
     def __read_xml_config(self):
         try:
             tree = ET.parse(self.config_file)
@@ -208,11 +228,12 @@ class TacoShell:
                 if os.path.isfile(self.components['entry_path_text'].get()):
                     self.components['btn_generate'].config(state='normal')
 
+            # TODO generalize window positioning code and move to own method
             width_raw = tree.find('window/window_width').text
             height_raw = tree.find('window/window_height').text
             if width_raw is not None and height_raw is not None:
-                x = tree.find('window/window_x').text
-                y = tree.find('window/window_y').text
+                x = str(max(0, int(tree.find('window/window_x').text)))
+                y = str(max(0, int(tree.find('window/window_y').text)))
                 width = str(min(int(width_raw), self.root.winfo_screenwidth()))
                 height = str(min(int(height_raw), self.root.winfo_screenheight()))
                 self.root.geometry('{}x{}+{}+{}'.format(width, height, x, y))
@@ -308,11 +329,14 @@ class TacoShell:
             window_flags.attributes('-toolwindow', True)
             window_flags.protocol("WM_DELETE_WINDOW", lambda: self.__tool_window_closing(window_flags))
 
+            frame_flags = Frame(window_flags)
+            frame_flags.pack(fill=BOTH, expand=YES)
+
             v = []
-            Button(window_flags, text='set', command=lambda: self.__set_flags(v)).pack(side=BOTTOM, anchor='e')
+            Button(frame_flags, text='set', command=lambda: self.__set_flags(v)).pack(side=BOTTOM, anchor='e')
             for i, w in enumerate(self.packing['list']):
                 if w['operable']:
-                    row = Frame(window_flags)
+                    row = Frame(frame_flags)
                     Label(row, text=w['name']).pack(side=LEFT)
                     v.append({'idx': i, 'var': StringVar(row)})
                     val = 'True{}' if w['flag'] else 'False{}'
@@ -324,10 +348,10 @@ class TacoShell:
                     opt.pack(side=RIGHT)
 
                     row.pack(side=TOP, fill=X)
-                    Frame(window_flags, height=2, borderwidth=1, relief=GROOVE).pack(side=TOP, fill=X)
+                    Frame(frame_flags, height=2, borderwidth=1, relief=GROOVE).pack(side=TOP, fill=X)
 
             self.components['window_flags'] = window_flags
-            window_flags.mainloop()
+            frame_flags.mainloop()
 
         elif not self.components['window_flags'].state() == 'normal':
             self.components['window_flags'].deiconify()
@@ -416,6 +440,7 @@ class TacoShell:
         if 'flags_changed' not in self.instance_changes:
             self.instance_changes.append('flags_changed')
 
+    """Initialize frames"""
     def __init_menu(self):
         menubar = Menu(self.root)
 
@@ -451,7 +476,7 @@ class TacoShell:
                                       text='Btn 2',
                                       width=15,
                                       fg=self.font_colors['normal'],
-                                      command=None)
+                                      command=self.throw_error)
 
         lbl_debug = TkLabel(frame_debug, text="Debugging", font='semi-bold',
                             bg=self.colors['milddark'],
@@ -476,6 +501,9 @@ class TacoShell:
 
         self.components['btn_override'] = btn_override
         self.components['frame_debug'] = frame_debug
+
+    def throw_error(self):
+        raise Exception('testetsetests')
 
     def __toggle_debug(self, state):
         if state:
@@ -508,26 +536,64 @@ class TacoShell:
         frame_generate = Frame(self.root)
         btn_generate = self.__new_button(frame_generate,
                                          image=self.icons['play'],
-                                         state='disabled')
+                                         state='disabled',
+                                         command=self.__generate_command)
+
+        btn_stop = self.__new_button(frame_generate,
+                                     image=self.icons['stop'],
+                                     state='disabled',
+                                     command=self.__stop_command)
 
         lbl_generate = Label(frame_generate, text='Generate', font='semi-bold')
 
-        btn_generate.pack(side=RIGHT, padx=5, pady=5, fill=X)
+        btn_stop.pack(side=RIGHT, padx=[0, 5], pady=5, anchor='s')
+        btn_generate.pack(side=RIGHT, padx=5, pady=5)
         lbl_generate.pack(side=RIGHT)
 
+        self.components['STOP_COMMAND'] = False
         self.components['frame_generate'] = frame_generate
         self.components['btn_generate'] = btn_generate
+        self.components['btn_stop'] = btn_stop
+        self.components['btn_generate_command'] = \
+            lambda: self.write_to_log('No command connected to \'btn_generate\'', 'bad')
+
+    def __stop_command(self):
+        self.components['STOP_COMMAND'] = True
+
+    def __generate_command(self):
+        c = self.components
+        c['STOP_COMMAND'] = False
+        c['btn_stop'].configure(state='normal')
+        c['lbl_progress'].config(text='Processing')
+        self.write_to_log('Started processing', 'good')
+        start_time = c['start_time'] = c['last_update'] = time()
+
+        try:
+            c['btn_generate_command']()
+            self.write_to_log('Finished processing in {} seconds\n'.format(str(time() - start_time)), 'good')
+            c['bar_progress']['value'] = c['bar_progress']['maximum']
+            c['lbl_progress'].config(text='Completed')
+            c['btn_stop'].configure(state='disabled')
+            c['txt_log'].yview_moveto(1)
+
+        except Exception as e:
+            self.write_to_log('Stopped code execution due to error\n'.format(str(time() - start_time)), 'bad')
+            c['btn_stop'].configure(state='disabled')
+            c['lbl_progress'].config(text='Error')
+            c['txt_log'].yview_moveto(1)
+            raise e
 
     def __init_frame_progress(self):
         frame_progress = Frame(self.root, relief='solid')
-        progressbar = Progressbar(frame_progress, style='black.Horizontal.TProgressbar')
+        bar_progress = Progressbar(frame_progress, style='black.Horizontal.TProgressbar', mode='determinate')
         lbl_progress = Label(frame_progress, text="Idle", width=10)
 
         lbl_progress.pack(side=LEFT, padx=[5, 0])
-        progressbar.pack(side=RIGHT, padx=5, pady=5, fill=X, expand=YES)
+        bar_progress.pack(side=RIGHT, padx=5, pady=5, fill=X, expand=YES)
 
         self.components['frame_progress'] = frame_progress
-        self.components['lbl_progress'] = lbl_progress
+        self.components['lbl_progress'] = lbl_progress  # TODO change labels to StringVar()
+        self.components['bar_progress'] = bar_progress
 
     def __new_button(self, *args, **kwargs):
         button = TkButton(*args, **kwargs, bg=self.colors['milddark'])
@@ -548,6 +614,7 @@ class TacoShell:
                 pg[self.index]['flag'].set(False)
 
             else:
+                # TODO only repack if something has changed since last
                 pg[self.index]['flag'].set(True)
                 for w in pg:
                     w['handle'].pack_forget()
@@ -587,6 +654,7 @@ class TacoShell:
         txt_log.tag_configure('normal', foreground=self.font_colors['normal'])
         txt_log.tag_configure('highlighted', foreground=self.font_colors['highlighted'])
         txt_log.tag_configure('bad', foreground=self.font_colors['bad'])
+        txt_log.tag_configure('good', foreground=self.font_colors['good'])
 
         scrollbar_vert.pack(side=RIGHT, fill=Y, pady=(5, 25))
         scrollbar_hori.pack(side=BOTTOM, fill=X, padx=(5, 5))
@@ -697,14 +765,13 @@ class TacoShell:
             state='normal' if os.path.isfile(self.components['entry_path'].get()) else 'disabled')
 
     def __open_definition(self):
-        response = filedialog.askopenfilename(
-            title="Select file", filetypes=(("Block definition", "*.def"), ("all files", "*.*")))
-        if response != '':
+        files = self.components['btn_open_definition_command']()
+        for file in list(files):
             tab_control: Notebook = self.components['tab_control']
             frame_definition = Frame(tab_control)
-            name, _ = os.path.basename(response).split('.')
+            name, _ = os.path.basename(file).split('.')
             tab_control.insert(1, frame_definition, text=name)
-            tab_control.select(1)
+            tab_control.select(len(tab_control.children) - 2)
 
             txt_contents = Text(frame_definition, wrap='none',
                                 background=self.colors['dark'],
@@ -713,15 +780,15 @@ class TacoShell:
 
             button_panel = Frame(frame_definition)
             btn_close = self.__new_button(button_panel, image=self.icons['close'],
-                                          command=lambda: tab_control.forget(tab_control.select()))
+                                          command=lambda: self.__close_tab(tab_control))
 
             lbl_status = Label(button_panel)
 
             btn_save = self.__new_button(button_panel, image=self.icons['save'],
-                                         command=lambda: self.__save_tab_contents(txt_contents, response, lbl_status))
+                                         command=lambda: self.__save_tab_contents(txt_contents, file, lbl_status))
 
             btn_reset = self.__new_button(button_panel, image=self.icons['revert'],
-                                          command=lambda: self.__reset_tab_contents(txt_contents, response, lbl_status))
+                                          command=lambda: self.__reset_tab_contents(txt_contents, file, lbl_status))
 
             txt_contents.bind('<Key>', lambda e: lbl_status.configure(
                 text='*unsaved changes'))  # TODO this triggers on all kinds of keypresses
@@ -734,9 +801,13 @@ class TacoShell:
             button_panel.pack(side=TOP, fill=X)
             txt_contents.pack(side=BOTTOM, fill=BOTH, expand=YES)
 
-            f = open(response, 'r')
+            f = open(file, 'r')
             for line in f.readlines():
                 txt_contents.insert('end', line)
+
+    @staticmethod
+    def __close_tab(tab_control):
+        tab_control.forget(tab_control.select())
 
     @staticmethod
     def __save_tab_contents(widget, file, label):
@@ -756,11 +827,6 @@ class TacoShell:
         label.configure(text='reverted')
 
     def __set_directory(self):
-        """
-        Select directory for files.
-
-        :return:
-        """
         response = filedialog.askopenfilename(
             title="Select file", filetypes=(("Taglist", "*.csv"), ("all files", "*.*")))
         if response != '':
@@ -769,17 +835,14 @@ class TacoShell:
 
     @staticmethod
     def interpret_file(file, delimiter=None, quotechar=None):
-        """
-
-        :return:
-        """
         raw_file = open(file, 'r', newline='')
         eval_buffer = []
-        for line in raw_file.readlines():
+        index = 0
+        for index, line in enumerate(raw_file.readlines()):
             if line.strip(' \t\r\n') and line[0] != '@':
                 eval_buffer.append(line)
         interpreted_file = csv.reader(eval_buffer, delimiter=delimiter, quotechar=quotechar, skipinitialspace=True)
-        return interpreted_file
+        return interpreted_file, index
 
     @staticmethod
     def get_timestamp(file_friendly=False):
@@ -788,10 +851,34 @@ class TacoShell:
         else:
             return datetime.now().strftime('%Y.%m.%d %H:%M')
 
+    def update_progress(self, force=False):
+        current_time = time()
+        start_time = self.components['start_time']
+        delta_update = current_time - self.components['last_update']
+        delta_start = current_time - start_time
+        maximum = self.components['bar_progress']['maximum']
+        value = self.components['bar_progress']['value']
+        update = False
+        if force:
+            update = True
+        else:
+            if self.progress_update_cycle < delta_update:
+                if value == 0:
+                    return
+
+                if delta_start/value*maximum < 30 or 1 < delta_update or delta_start < 10:
+                    update = True
+        if update:
+            self.components['txt_log'].yview_moveto(1)  # ~10% processing time cost for blockgenerator
+            self.components['bar_progress'].update()  # ~25% processing time cost for blockgenerator
+            self.components['last_update'] = current_time
+            self.components['lbl_progress'].configure(text='{}/{}'.format(value, maximum))
+
     def write_to_log(self, text, font='normal'):
         txt: Text = self.components['txt_log']
         txt.config(state='normal')
-        txt.insert('end', self.get_timestamp() + ':\t', 'highlighted')
+        if font in ('normal', 'good'):
+            txt.insert('end', self.get_timestamp() + ':\t', 'highlighted')
         txt.insert('end', ''.join(text) + '\n', font)
         if not self.debug_mode:
             txt.config(state='disabled')

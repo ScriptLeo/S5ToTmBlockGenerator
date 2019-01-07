@@ -1,25 +1,133 @@
-12-16 02:51
+01-04 08:56
 Traceback (most recent call last):
-  File "H:/TacoShell/main.py", line 409, in main
-    TacoShell()
-  File "H:/TacoShell/main.py", line 24, in __init__
-    1/0
-ZeroDivisionError: division by zero
-12-17 10:46
-Traceback (most recent call last):
-  File "G:/TacoShell/main.py", line 476, in main
-    TacoShell()
-  File "G:/TacoShell/main.py", line 46, in __init__
-    self.__set_pack_order()
-  File "G:/TacoShell/main.py", line 99, in __set_pack_order
-    config.seek(0)
-AttributeError: '_csv.reader' object has no attribute 'seek'
-12-17 15:24
-Traceback (most recent call last):
-  File "G:/TacoShell/main.py", line 476, in main
+  File "G:/TacoShell/main.py", line 805, in main
     TacoShell()
   File "G:/TacoShell/main.py", line 48, in __init__
-    self.__repack()
-  File "G:/TacoShell/main.py", line 404, in __repack
-    if (s is None or s == w['side']) and w['flag']:
-KeyError: 'flag'
+    self.__init_debug()
+  File "G:/TacoShell/main.py", line 454, in __init_debug
+    command=throw_error)
+NameError: name 'throw_error' is not defined
+01-07 14:27
+Traceback (most recent call last):
+  File "G:\TacoShell\tacoshell.py", line 867, in main
+    TacoShell()
+  File "G:\TacoShell\tacoshell.py", line 48, in __init__
+    self.__init_appearance()
+  File "G:\TacoShell\tacoshell.py", line 120, in __init_appearance
+    raise Exception('Missing icon(s) in resources/ folder: ' + ', '.join(missing_icons))
+Exception: Missing icon(s) in resources/ folder: browse.png
+01-07 14:28
+Traceback (most recent call last):
+  File "G:\TacoShell\tacoshell.py", line 867, in main
+    TacoShell()
+  File "G:\TacoShell\tacoshell.py", line 48, in __init__
+    self.__init_appearance()
+  File "G:\TacoShell\tacoshell.py", line 103, in __init_appearance
+    self.icons['browse'] = PhotoImage(Image.open("resources/browse.png").resize((100, 100), ANTIALIAS))
+  File "C:\Users\z003d8sd\AppData\Local\Programs\Python\Python37\lib\site-packages\PIL\Image.py", line 2634, in open
+    fp = builtins.open(filename, "rb")
+FileNotFoundError: [Errno 2] No such file or directory: 'resources/browse.png'
+01-07 14:29
+Traceback (most recent call last):
+  File "G:\TacoShell\tacoshell.py", line 867, in main
+    TacoShell()
+  File "G:\TacoShell\tacoshell.py", line 48, in __init__
+    self.__init_appearance()
+  File "G:\TacoShell\tacoshell.py", line 120, in __init_appearance
+    raise Exception('Missing icon(s) in resources/ folder: ' + ', '.join(missing_icons))
+Exception: Missing icon(s) in resources/ folder: browse_excel.png, browse.png
+01-07 14:34
+Traceback (most recent call last):
+  File "G:\TacoShell\tacoshell.py", line 87, in __init_appearance
+    self.icons['save'] = PhotoImage(Image.open("resources/save.png").resize(default_mini_icon_size, ANTIALIAS))
+  File "C:\Users\z003d8sd\AppData\Local\Programs\Python\Python37\lib\site-packages\PIL\Image.py", line 2634, in open
+    fp = builtins.open(filename, "rb")
+FileNotFoundError: [Errno 2] No such file or directory: 'resources/save.png'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "G:\TacoShell\tacoshell.py", line 868, in main
+    TacoShell()
+  File "G:\TacoShell\tacoshell.py", line 48, in __init__
+    self.__init_appearance()
+  File "G:\TacoShell\tacoshell.py", line 89, in __init_appearance
+    self.icons['save'] = PhotoImage()
+  File "C:\Users\z003d8sd\AppData\Local\Programs\Python\Python37\lib\site-packages\PIL\ImageTk.py", line 113, in __init__
+    mode = Image.getmodebase(mode)
+  File "C:\Users\z003d8sd\AppData\Local\Programs\Python\Python37\lib\site-packages\PIL\Image.py", line 327, in getmodebase
+    return ImageMode.getmode(mode).basemode
+  File "C:\Users\z003d8sd\AppData\Local\Programs\Python\Python37\lib\site-packages\PIL\ImageMode.py", line 56, in getmode
+    return _modes[mode]
+KeyError: None
+01-07 14:36
+Traceback (most recent call last):
+  File "G:\TacoShell\tacoshell.py", line 868, in main
+    TacoShell()
+  File "G:\TacoShell\tacoshell.py", line 48, in __init__
+    self.__init_appearance()
+  File "G:\TacoShell\tacoshell.py", line 121, in __init_appearance
+    raise Exception('Missing icon(s) in resources/ folder: ' + ', '.join(missing_icons))
+Exception: Missing icon(s) in resources/ folder: save.png
+01-07 14:41
+Traceback (most recent call last):
+  File "G:\TacoShell\tacoshell.py", line 874, in main
+    TacoShell()
+  File "G:\TacoShell\tacoshell.py", line 62, in __init__
+    self.__initialization_summary()
+  File "G:\TacoShell\tacoshell.py", line 66, in __initialization_summary
+    self.write_to_log(ele, 'bad')
+  File "G:\TacoShell\tacoshell.py", line 864, in write_to_log
+    txt.config(state='normal')
+  File "C:\Users\z003d8sd\AppData\Local\Programs\Python\Python37\lib\tkinter\__init__.py", line 1482, in configure
+    return self._configure('configure', cnf, kw)
+  File "C:\Users\z003d8sd\AppData\Local\Programs\Python\Python37\lib\tkinter\__init__.py", line 1473, in _configure
+    self.tk.call(_flatten((self._w, cmd)) + self._options(cnf))
+_tkinter.TclError: invalid command name ".!frame5.!notebook.!frame.!text"
+01-07 14:52
+Traceback (most recent call last):
+  File "G:\TacoShell\tacoshell.py", line 857, in main
+    TacoShell()
+  File "G:\TacoShell\tacoshell.py", line 49, in __init__
+    self.__init_appearance()
+  File "G:\TacoShell\tacoshell.py", line 104, in __init_appearance
+    Image.open('resources/' + icon['name' + 'png']).resize(icon['size'], ANTIALIAS))
+KeyError: 'namepng'
+01-07 14:52
+Traceback (most recent call last):
+  File "G:\TacoShell\tacoshell.py", line 857, in main
+    TacoShell()
+  File "G:\TacoShell\tacoshell.py", line 49, in __init__
+    self.__init_appearance()
+  File "G:\TacoShell\tacoshell.py", line 104, in __init_appearance
+    Image.open('resources/' + icon['name' + '.png']).resize(icon['size'], ANTIALIAS))
+KeyError: 'name.png'
+01-07 21:23
+Traceback (most recent call last):
+  File "H:/TacoShell/tacoshell.py", line 872, in main
+    TacoShell()
+  File "H:/TacoShell/tacoshell.py", line 53, in __init__
+    self.__init_frame_generate()
+  File "H:/TacoShell/tacoshell.py", line 545, in __init_frame_generate
+    btn_stop.pack(side=RIGHT, padx=[0, 5], pady=5, anchor='S')
+  File "C:\Users\EivindBrate\AppData\Local\Programs\Python\Python37\lib\tkinter\__init__.py", line 2140, in pack_configure
+    + self._options(cnf, kw))
+_tkinter.TclError: bad anchor "S": must be n, ne, e, se, s, sw, w, nw, or center
+01-07 21:48
+Traceback (most recent call last):
+  File "H:/TacoShell/tacoshell.py", line 884, in main
+    TacoShell()
+  File "H:/TacoShell/tacoshell.py", line 52, in __init__
+    self.__init_frame_source()
+  File "H:/TacoShell/tacoshell.py", line 521, in __init_frame_source
+    image=self.icons['browse_excel'],
+KeyError: 'browse_excel'
+01-07 21:48
+Traceback (most recent call last):
+  File "H:/TacoShell/tacoshell.py", line 884, in main
+    TacoShell()
+  File "H:/TacoShell/tacoshell.py", line 52, in __init__
+    self.__init_frame_source()
+  File "H:/TacoShell/tacoshell.py", line 521, in __init_frame_source
+    image=self.icons['browse_excel'],
+KeyError: 'browse_excel'
