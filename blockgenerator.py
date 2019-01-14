@@ -36,8 +36,12 @@ class BlockGenerator:
     def generate_blocks(self, source_file):
         self.source_file = source_file
 
-        deviations, _ = self.parent.interpret_file(self.deviations_file, ';', '"')
+        deviations, _ = self.parent.interpret_file(self.deviations_file, ';', '"', buffermode='list')
         list_tags, count = self.parent.interpret_file(source_file, ';', '"')
+        with open('relevant_blocks.txt', 'r') as f:
+            relevant_blocks = [line.strip() for line in f]
+        with open('relevant_nodes.txt', 'r') as f:
+            relevant_nodes = [line.strip() for line in f]
 
         buffered_code_defs = self.buffer_structures(self.code_path, 'codedef')
         buffered_opc_defs = self.buffer_structures(self.opc_path, 'opcdef')
@@ -48,7 +52,8 @@ class BlockGenerator:
         header = next(list_tags)
         idx_of_mkz = header.index('MKZ')
         idx_of_tag = header.index('TAG')
-        idx_of_description = header.index('PSRV')
+        idx_of_psrv = header.index('PSRV')
+        idx_of_block = header.index('BLOCK')
 
         progress = IntVar()
         self.progressbar.configure(variable=progress, maximum=count)
@@ -56,36 +61,47 @@ class BlockGenerator:
         for index, data in enumerate(list_tags):
             if self.parent.components['STOP_COMMAND']:
                 return
-            tag = data[idx_of_tag].rstrip(' ')
-            mkz = data[idx_of_mkz].rstrip(' ')
-            description = data[idx_of_description].rstrip(' ')
-            busnode, typ, name = data[idx_of_mkz].rstrip(' ').split('_')
-            bus, node = busnode.split('X')
+            failed = False
+            block = data[idx_of_block].rstrip(' ').upper()
+            if block in relevant_blocks:
+                busnode, typ, name = data[idx_of_mkz].rstrip(' ').upper().split('_')
+                bus, node = busnode.upper().split('X')
+                if node in relevant_nodes:
+                    asnode = 'AS' + bus
+                    tag = data[idx_of_tag].rstrip(' ').upper()
+                    mkz = data[idx_of_mkz].rstrip(' ').upper()
+                    desc = data[idx_of_psrv].rstrip(' ').upper().replace('Æ', 'AE').replace('Ø', 'OE').replace('Å', 'AA')
 
-            buffered_code_outputs.setdefault(node, {'body': '', 'tail': ''})
-            if typ in buffered_code_defs.keys():
-                self.write_to_output(buffered_code_defs, buffered_code_outputs,
-                                     typ, tag, node, name, description,
-                                     post='\n\n')
+                    if 16 < len(desc):  # Ensure max 16 chars
+                        desc = desc[:15]
+
+                    buffered_code_outputs.setdefault(asnode, {'body': '', 'tail': ''})
+                    if typ in buffered_code_defs.keys():
+                        self.write_to_output(buffered_code_defs, buffered_code_outputs,
+                                             typ, tag, asnode, name, desc,
+                                             post='\n')
+                    else:
+                        if not self.parent.override:
+                            raise Exception('Tag {} is of type {}, but the block definition file was missing'.format(tag, typ))
+
+                    if typ in buffered_opc_defs.keys():
+                        self.write_to_output(buffered_opc_defs, buffered_opc_output,
+                                             typ, tag, asnode, name, desc,
+                                             key='data')
+                    else:
+                        pass  # allow this case
+
+                    self.parent.write_to_log('tag: {}, \ttype: {}, \tmkz: {}'.format(tag, typ, mkz))
+                else:
+                    failed = True
+                    self.parent.write_to_log('{} is not listed as a relevant node and was ignored'.format(node), 'muted')
             else:
-                if not self.parent.override:
-                    raise Exception('Tag {} is of type {}, but the block definition file was missing'.format(tag, typ))
-
-            if typ in buffered_opc_defs.keys():
-                self.write_to_output(buffered_opc_defs, buffered_opc_output,
-                                     typ, tag, node, name, description,
-                                     key='data')
-            else:
-                pass  # allow this case
-
-            self.parent.write_to_log('tag: {}, \ttype: {}, \tmkz: {}'.format(tag, typ, mkz))
+                failed = True
+                self.parent.write_to_log('{} is not listed as a relevant block and was ignored'.format(block), 'muted')
             progress.set(index+1)
-            self.parent.update_progress()
+            self.parent.update_progress(failed=failed)
 
-            # if index == 9:  # Temporary limit
-            #     break
-
-        self.parent.update_progress(force=True)
+        self.parent.update_progress(force=True)  # Remainder
 
         if not os.path.isdir('outputs'):
             os.makedirs('outputs')
@@ -97,6 +113,8 @@ class BlockGenerator:
 
         with open('outputs/' + self.opc_file, 'w+') as f:
             f.write(buffered_opc_output['data']['body'])
+
+        self.parent.write_to_log('Wrote results to outputs\\', 'good')
 
     @staticmethod
     def buffer_structures(path, filt):
@@ -110,25 +128,34 @@ class BlockGenerator:
 
     @staticmethod
     def write_to_output(buffered_defs, buffered_outputs,
-                        typ, tag, node, name, description,
+                        typ: str, tag: str, node: str, name: str, desc: str,
                         post='', key=None):
+
         if typ in buffered_defs.keys():
-            if description is None:
-                description = tag
+            if desc is None:
+                desc = tag
 
             code = buffered_defs[typ] \
+                .rstrip(' ') \
                 .replace('{NODE}', node) \
                 .replace('{TAG}', tag) \
-                .replace('{DESCRIPTION}', description) \
-                .replace('{NAME}', name)
+                .replace('{DESCRIPTION}', desc) \
+                .replace('{NAME}', name) \
+                + '\n'
 
             if key is None:
                 key = node
 
             buffered_outputs[key]['body'] += code + post
             if 'tail' in buffered_outputs[key].keys():
-                hook_txt = ',XB,APPL' if buffered_outputs[key]['tail'] == '' else ''
-                buffered_outputs[key]['tail'] += 'A,{},{};\nE{};\n'.format(typ, name, hook_txt)
+                if buffered_outputs[key]['tail'] == '':  # First line of tail
+                    sub_head = 'ZYK,3;\n'
+                    sub_tail = ',XB,APPL'
+                else:
+                    sub_head = ''
+                    sub_tail = ''
+                buffered_outputs[key]['tail'] += '{}A,{},{};\nE{};\n'\
+                    .format(sub_head, typ, name, sub_tail)
 
 
 def make_taco():

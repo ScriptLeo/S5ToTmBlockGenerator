@@ -1,133 +1,246 @@
-01-04 08:56
+01-10 11:11
 Traceback (most recent call last):
-  File "G:/TacoShell/main.py", line 805, in main
+  File "I:/TacoShell/tacoshell.py", line 989, in main
     TacoShell()
-  File "G:/TacoShell/main.py", line 48, in __init__
-    self.__init_debug()
-  File "G:/TacoShell/main.py", line 454, in __init_debug
-    command=throw_error)
-NameError: name 'throw_error' is not defined
-01-07 14:27
+  File "I:/TacoShell/tacoshell.py", line 58, in __init__
+    self.__init_frame_tabs()
+  File "I:/TacoShell/tacoshell.py", line 766, in __init_frame_tabs
+    tab_control.add(frame_open, text='+', font='bold')
+  File "C:\Users\z003d8sd\AppData\Local\Programs\Python\Python37\lib\tkinter\ttk.py", line 846, in add
+    self.tk.call(self._w, "add", child, *(_format_optdict(kw)))
+_tkinter.TclError: unknown option "-font"
+01-10 15:53
 Traceback (most recent call last):
-  File "G:\TacoShell\tacoshell.py", line 867, in main
+  File "I:/TacoShell/tacoshell.py", line 1072, in main
     TacoShell()
-  File "G:\TacoShell\tacoshell.py", line 48, in __init__
-    self.__init_appearance()
-  File "G:\TacoShell\tacoshell.py", line 120, in __init_appearance
-    raise Exception('Missing icon(s) in resources/ folder: ' + ', '.join(missing_icons))
-Exception: Missing icon(s) in resources/ folder: browse.png
-01-07 14:28
+  File "I:/TacoShell/tacoshell.py", line 58, in __init__
+    self.__init_frame_tabs()
+  File "I:/TacoShell/tacoshell.py", line 729, in __init_frame_tabs
+    state='disabled'
+  File "I:/TacoShell/tacoshell.py", line 985, in __init__
+    command=txt_handle.yview)
+AttributeError: 'NoneType' object has no attribute 'yview'
+01-10 15:55
 Traceback (most recent call last):
-  File "G:\TacoShell\tacoshell.py", line 867, in main
+  File "I:/TacoShell/tacoshell.py", line 1072, in main
     TacoShell()
-  File "G:\TacoShell\tacoshell.py", line 48, in __init__
-    self.__init_appearance()
-  File "G:\TacoShell\tacoshell.py", line 103, in __init_appearance
-    self.icons['browse'] = PhotoImage(Image.open("resources/browse.png").resize((100, 100), ANTIALIAS))
-  File "C:\Users\z003d8sd\AppData\Local\Programs\Python\Python37\lib\site-packages\PIL\Image.py", line 2634, in open
-    fp = builtins.open(filename, "rb")
-FileNotFoundError: [Errno 2] No such file or directory: 'resources/browse.png'
-01-07 14:29
+  File "I:/TacoShell/tacoshell.py", line 58, in __init__
+    self.__init_frame_tabs()
+  File "I:/TacoShell/tacoshell.py", line 729, in __init_frame_tabs
+    state='disabled'
+  File "I:/TacoShell/tacoshell.py", line 985, in __init__
+    command=txt_handle.yview)
+AttributeError: 'NoneType' object has no attribute 'yview'
+01-10 15:57
 Traceback (most recent call last):
-  File "G:\TacoShell\tacoshell.py", line 867, in main
+  File "I:/TacoShell/tacoshell.py", line 1072, in main
     TacoShell()
-  File "G:\TacoShell\tacoshell.py", line 48, in __init__
-    self.__init_appearance()
-  File "G:\TacoShell\tacoshell.py", line 120, in __init_appearance
-    raise Exception('Missing icon(s) in resources/ folder: ' + ', '.join(missing_icons))
-Exception: Missing icon(s) in resources/ folder: browse_excel.png, browse.png
-01-07 14:34
+  File "I:/TacoShell/tacoshell.py", line 58, in __init__
+    self.__init_frame_tabs()
+  File "I:/TacoShell/tacoshell.py", line 729, in __init_frame_tabs
+    state='disabled'
+  File "I:/TacoShell/tacoshell.py", line 991, in __init__
+    super()['yscrollcommand'] = scrollbar_vert.set
+TypeError: 'super' object does not support item assignment
+01-11 12:22
 Traceback (most recent call last):
-  File "G:\TacoShell\tacoshell.py", line 87, in __init_appearance
-    self.icons['save'] = PhotoImage(Image.open("resources/save.png").resize(default_mini_icon_size, ANTIALIAS))
-  File "C:\Users\z003d8sd\AppData\Local\Programs\Python\Python37\lib\site-packages\PIL\Image.py", line 2634, in open
-    fp = builtins.open(filename, "rb")
-FileNotFoundError: [Errno 2] No such file or directory: 'resources/save.png'
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "G:\TacoShell\tacoshell.py", line 868, in main
+  File "I:/TacoShell/tacoshell.py", line 1017, in main
     TacoShell()
-  File "G:\TacoShell\tacoshell.py", line 48, in __init__
-    self.__init_appearance()
-  File "G:\TacoShell\tacoshell.py", line 89, in __init_appearance
-    self.icons['save'] = PhotoImage()
-  File "C:\Users\z003d8sd\AppData\Local\Programs\Python\Python37\lib\site-packages\PIL\ImageTk.py", line 113, in __init__
-    mode = Image.getmodebase(mode)
-  File "C:\Users\z003d8sd\AppData\Local\Programs\Python\Python37\lib\site-packages\PIL\Image.py", line 327, in getmodebase
-    return ImageMode.getmode(mode).basemode
-  File "C:\Users\z003d8sd\AppData\Local\Programs\Python\Python37\lib\site-packages\PIL\ImageMode.py", line 56, in getmode
-    return _modes[mode]
-KeyError: None
-01-07 14:36
-Traceback (most recent call last):
-  File "G:\TacoShell\tacoshell.py", line 868, in main
-    TacoShell()
-  File "G:\TacoShell\tacoshell.py", line 48, in __init__
-    self.__init_appearance()
-  File "G:\TacoShell\tacoshell.py", line 121, in __init_appearance
-    raise Exception('Missing icon(s) in resources/ folder: ' + ', '.join(missing_icons))
-Exception: Missing icon(s) in resources/ folder: save.png
-01-07 14:41
-Traceback (most recent call last):
-  File "G:\TacoShell\tacoshell.py", line 874, in main
-    TacoShell()
-  File "G:\TacoShell\tacoshell.py", line 62, in __init__
-    self.__initialization_summary()
-  File "G:\TacoShell\tacoshell.py", line 66, in __initialization_summary
-    self.write_to_log(ele, 'bad')
-  File "G:\TacoShell\tacoshell.py", line 864, in write_to_log
-    txt.config(state='normal')
-  File "C:\Users\z003d8sd\AppData\Local\Programs\Python\Python37\lib\tkinter\__init__.py", line 1482, in configure
-    return self._configure('configure', cnf, kw)
-  File "C:\Users\z003d8sd\AppData\Local\Programs\Python\Python37\lib\tkinter\__init__.py", line 1473, in _configure
-    self.tk.call(_flatten((self._w, cmd)) + self._options(cnf))
-_tkinter.TclError: invalid command name ".!frame5.!notebook.!frame.!text"
-01-07 14:52
-Traceback (most recent call last):
-  File "G:\TacoShell\tacoshell.py", line 857, in main
-    TacoShell()
-  File "G:\TacoShell\tacoshell.py", line 49, in __init__
-    self.__init_appearance()
-  File "G:\TacoShell\tacoshell.py", line 104, in __init_appearance
-    Image.open('resources/' + icon['name' + 'png']).resize(icon['size'], ANTIALIAS))
-KeyError: 'namepng'
-01-07 14:52
-Traceback (most recent call last):
-  File "G:\TacoShell\tacoshell.py", line 857, in main
-    TacoShell()
-  File "G:\TacoShell\tacoshell.py", line 49, in __init__
-    self.__init_appearance()
-  File "G:\TacoShell\tacoshell.py", line 104, in __init_appearance
-    Image.open('resources/' + icon['name' + '.png']).resize(icon['size'], ANTIALIAS))
-KeyError: 'name.png'
-01-07 21:23
-Traceback (most recent call last):
-  File "H:/TacoShell/tacoshell.py", line 872, in main
-    TacoShell()
-  File "H:/TacoShell/tacoshell.py", line 53, in __init__
-    self.__init_frame_generate()
-  File "H:/TacoShell/tacoshell.py", line 545, in __init_frame_generate
-    btn_stop.pack(side=RIGHT, padx=[0, 5], pady=5, anchor='S')
-  File "C:\Users\EivindBrate\AppData\Local\Programs\Python\Python37\lib\tkinter\__init__.py", line 2140, in pack_configure
+  File "I:/TacoShell/tacoshell.py", line 57, in __init__
+    self.__init_frame_progress()
+  File "I:/TacoShell/tacoshell.py", line 699, in __init_frame_progress
+    bar_progress.pack(side=RIGHT, padx=[], fill=X, expand=YES)
+  File "C:\Users\z003d8sd\AppData\Local\Programs\Python\Python37\lib\tkinter\__init__.py", line 2140, in pack_configure
     + self._options(cnf, kw))
-_tkinter.TclError: bad anchor "S": must be n, ne, e, se, s, sw, w, nw, or center
-01-07 21:48
+_tkinter.TclError: wrong number of parts to pad specification
+01-11 12:28
 Traceback (most recent call last):
-  File "H:/TacoShell/tacoshell.py", line 884, in main
+  File "I:/TacoShell/tacoshell.py", line 1020, in main
     TacoShell()
-  File "H:/TacoShell/tacoshell.py", line 52, in __init__
-    self.__init_frame_source()
-  File "H:/TacoShell/tacoshell.py", line 521, in __init_frame_source
-    image=self.icons['browse_excel'],
-KeyError: 'browse_excel'
-01-07 21:48
+  File "I:/TacoShell/tacoshell.py", line 57, in __init__
+    self.__init_frame_progress()
+  File "I:/TacoShell/tacoshell.py", line 697, in __init_frame_progress
+    lbl_estimated_time = Label(frame_progress, variable=var_est, width=15)
+  File "C:\Users\z003d8sd\AppData\Local\Programs\Python\Python37\lib\tkinter\ttk.py", line 761, in __init__
+    Widget.__init__(self, master, "ttk::label", kw)
+  File "C:\Users\z003d8sd\AppData\Local\Programs\Python\Python37\lib\tkinter\ttk.py", line 559, in __init__
+    tkinter.Widget.__init__(self, master, widgetname, kw=kw)
+  File "C:\Users\z003d8sd\AppData\Local\Programs\Python\Python37\lib\tkinter\__init__.py", line 2296, in __init__
+    (widgetName, self._w) + extra + self._options(cnf))
+_tkinter.TclError: unknown option "-variable"
+01-11 14:36
 Traceback (most recent call last):
-  File "H:/TacoShell/tacoshell.py", line 884, in main
+  File "I:/TacoShell/tacoshell.py", line 1031, in main
     TacoShell()
-  File "H:/TacoShell/tacoshell.py", line 52, in __init__
-    self.__init_frame_source()
-  File "H:/TacoShell/tacoshell.py", line 521, in __init_frame_source
-    image=self.icons['browse_excel'],
-KeyError: 'browse_excel'
+  File "I:/TacoShell/tacoshell.py", line 58, in __init__
+    self.__init_frame_tabs()
+  File "I:/TacoShell/tacoshell.py", line 731, in __init_frame_tabs
+    state='disabled'
+  File "I:/TacoShell/tacoshell.py", line 929, in __init__
+    ShellButton(search_handle).pack(side=RIGHT, padx=5)
+TypeError: __init__() takes 1 positional argument but 2 were given
+01-11 15:00
+Traceback (most recent call last):
+  File "I:/TacoShell/tacoshell.py", line 1040, in main
+    TacoShell()
+  File "I:/TacoShell/tacoshell.py", line 58, in __init__
+    self.__init_frame_tabs()
+  File "I:/TacoShell/tacoshell.py", line 732, in __init_frame_tabs
+    state='disabled'
+  File "I:/TacoShell/tacoshell.py", line 930, in __init__
+    ShellButton(search_handle, text='>', height=0.2).pack(side=RIGHT, padx=5)
+  File "I:/TacoShell/tacoshell.py", line 1028, in __init__
+    super().__init__(*args, **kwargs, bg=self.color_leave)
+  File "C:\Users\z003d8sd\AppData\Local\Programs\Python\Python37\lib\tkinter\__init__.py", line 2366, in __init__
+    Widget.__init__(self, master, 'button', cnf, kw)
+  File "C:\Users\z003d8sd\AppData\Local\Programs\Python\Python37\lib\tkinter\__init__.py", line 2296, in __init__
+    (widgetName, self._w) + extra + self._options(cnf))
+_tkinter.TclError: expected integer but got "0.2"
+01-11 15:34
+Traceback (most recent call last):
+  File "I:/TacoShell/tacoshell.py", line 1057, in main
+    TacoShell()
+  File "I:/TacoShell/tacoshell.py", line 58, in __init__
+    self.__init_frame_tabs()
+  File "I:/TacoShell/tacoshell.py", line 736, in __init_frame_tabs
+    state='disabled'
+  File "I:/TacoShell/tacoshell.py", line 937, in __init__
+    func=self.__search_next
+  File "I:/TacoShell/tacoshell.py", line 1042, in __init__
+    super().__init__(*args, **kwargs)
+  File "C:\Users\z003d8sd\AppData\Local\Programs\Python\Python37\lib\tkinter\__init__.py", line 2366, in __init__
+    Widget.__init__(self, master, 'button', cnf, kw)
+  File "C:\Users\z003d8sd\AppData\Local\Programs\Python\Python37\lib\tkinter\__init__.py", line 2296, in __init__
+    (widgetName, self._w) + extra + self._options(cnf))
+_tkinter.TclError: unknown option "-func"
+01-14 13:36
+Traceback (most recent call last):
+  File "I:/TacoShell/tacoshell.py", line 1083, in main
+    TacoShell()
+  File "I:/TacoShell/tacoshell.py", line 54, in __init__
+    self.__init_debug()
+  File "I:/TacoShell/tacoshell.py", line 592, in __init_debug
+    fg=self.colors['override'],
+KeyError: 'override'
+01-14 13:36
+Traceback (most recent call last):
+  File "I:/TacoShell/tacoshell.py", line 1082, in main
+    TacoShell()
+  File "I:/TacoShell/tacoshell.py", line 54, in __init__
+    self.__init_debug()
+  File "I:/TacoShell/tacoshell.py", line 586, in __init_debug
+    fg=self.font_colors['override'],
+KeyError: 'override'
+01-14 15:07
+Traceback (most recent call last):
+  File "I:/TacoShell/tacoshell.py", line 1095, in main
+    TacoShell()
+  File "I:/TacoShell/tacoshell.py", line 63, in __init__
+    self.__add__frame_to_packing()
+TypeError: __add__frame_to_packing() missing 4 required positional arguments: 'index', 'name', 'frame_handle', and 'pack_kwargs'
+01-14 15:07
+Traceback (most recent call last):
+  File "I:/TacoShell/tacoshell.py", line 1095, in main
+    TacoShell()
+  File "I:/TacoShell/tacoshell.py", line 63, in __init__
+    self.__add__frame_to_packing()
+TypeError: __add__frame_to_packing() missing 4 required positional arguments: 'index', 'name', 'frame_handle', and 'pack_kwargs'
+01-14 15:08
+Traceback (most recent call last):
+  File "I:/TacoShell/tacoshell.py", line 1096, in main
+    TacoShell()
+  File "I:/TacoShell/tacoshell.py", line 64, in __init__
+    **{'side': TOP, 'fill': BOTH, 'expand': YES})
+TypeError: __add__frame_to_packing() got an unexpected keyword argument 'side'
+01-14 15:09
+Traceback (most recent call last):
+  File "I:/TacoShell/tacoshell.py", line 1096, in main
+    TacoShell()
+  File "I:/TacoShell/tacoshell.py", line 64, in __init__
+    {'side': TOP, 'fill': BOTH, 'expand': YES})
+TypeError: __add__frame_to_packing() missing 1 required positional argument: 'pack_kwargs'
+01-14 15:46
+Traceback (most recent call last):
+  File "I:/TacoShell/tacoshell.py", line 1099, in main
+    TacoShell()
+  File "I:/TacoShell/tacoshell.py", line 64, in __init__
+    {'side': TOP, 'fill': BOTH, 'expand': YES})
+  File "I:/TacoShell/tacoshell.py", line 228, in __add_to_packing
+    self.components['packing_indexed'].insert(index, (name, {'widget': frame_handle,
+KeyError: 'packing_indexed'
+01-14 15:48
+Traceback (most recent call last):
+  File "I:/TacoShell/tacoshell.py", line 1105, in main
+    TacoShell()
+  File "I:/TacoShell/tacoshell.py", line 66, in __init__
+    self.__refresh_packing()
+  File "I:/TacoShell/tacoshell.py", line 239, in __refresh_packing
+    self.components['packing'] = OrderedDict(self.components['packing_additions'])
+KeyError: 'packing_additions'
+01-14 18:12
+Traceback (most recent call last):
+  File "H:/TacoShell/tacoshell.py", line 1125, in main
+    TacoShell()
+  File "H:/TacoShell/tacoshell.py", line 65, in __init__
+    self.__repack()
+  File "H:/TacoShell/tacoshell.py", line 248, in __repack
+    w['widget'].pack_forget()
+TypeError: string indices must be integers
+01-14 18:14
+Traceback (most recent call last):
+  File "H:/TacoShell/tacoshell.py", line 1125, in main
+    TacoShell()
+  File "H:/TacoShell/tacoshell.py", line 65, in __init__
+    self.__repack()
+  File "H:/TacoShell/tacoshell.py", line 248, in __repack
+    w['widget'].pack_forget()
+TypeError: tuple indices must be integers or slices, not str
+01-14 19:31
+Traceback (most recent call last):
+  File "H:/TacoShell/tacoshell.py", line 1073, in main
+    TacoShell()
+  File "H:/TacoShell/tacoshell.py", line 62, in __init__
+    self.__set_packing()
+  File "H:/TacoShell/tacoshell.py", line 199, in __set_packing
+    self.__refresh_packing()
+  File "H:/TacoShell/tacoshell.py", line 208, in __refresh_packing
+    c = self.components['packing']
+KeyError: 'packing'
+01-14 19:31
+Traceback (most recent call last):
+  File "H:/TacoShell/tacoshell.py", line 1073, in main
+    TacoShell()
+  File "H:/TacoShell/tacoshell.py", line 62, in __init__
+    self.__set_packing()
+  File "H:/TacoShell/tacoshell.py", line 199, in __set_packing
+    self.__refresh_packing()
+  File "H:/TacoShell/tacoshell.py", line 208, in __refresh_packing
+    c = self.components['packing']
+KeyError: 'packing'
+01-14 19:32
+Traceback (most recent call last):
+  File "H:/TacoShell/tacoshell.py", line 1072, in main
+    TacoShell()
+  File "H:/TacoShell/tacoshell.py", line 64, in __init__
+    self.__refresh_packing()
+  File "H:/TacoShell/tacoshell.py", line 207, in __refresh_packing
+    c = self.components['packing']
+KeyError: 'packing'
+01-14 19:39
+Traceback (most recent call last):
+  File "H:/TacoShell/tacoshell.py", line 1076, in main
+    TacoShell()
+  File "H:/TacoShell/tacoshell.py", line 65, in __init__
+    self.__repack()
+  File "H:/TacoShell/tacoshell.py", line 222, in __repack
+    if v['flag']:
+KeyError: 'flag'
+01-14 19:41
+Traceback (most recent call last):
+  File "H:/TacoShell/tacoshell.py", line 1076, in main
+    TacoShell()
+  File "H:/TacoShell/tacoshell.py", line 65, in __init__
+    self.__repack()
+  File "H:/TacoShell/tacoshell.py", line 222, in __repack
+    if v['flag']:
+KeyError: 'flag'
