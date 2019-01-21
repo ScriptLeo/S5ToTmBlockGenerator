@@ -21,7 +21,7 @@ class BlockGenerator:
         self.parent: TacoShell = parent
         self.parent.components['btn_generate_command'] = self.generate
         self.parent.components['btn_open_definition_command'] = self.open_definitions
-        self.parent.root.title("Block Generator")
+        self.parent.root_window.title("Block Generator")
         self.progressbar = self.parent.components['bar_progress']
 
     def generate(self):
