@@ -3,7 +3,6 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/TacoShell.iml" filepath="$PROJECT_DIR$/.idea/TacoShell.iml" />
-      <module fileurl="file://H://TacoShell/.idea/TacoShell.iml" filepath="H://TacoShell/.idea/TacoShell.iml" />
     </modules>
   </component>
 </project>

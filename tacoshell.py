@@ -1,4 +1,4 @@
-from tkinter import Tk, filedialog, messagebox, Text, Menu, LEFT, RIGHT, TOP, BOTTOM, BOTH, YES, X, Y, \
+from tkinter import Tk, filedialog, messagebox, Text, Menu, Canvas, LEFT, RIGHT, TOP, BOTTOM, BOTH, YES, X, Y, \
     Toplevel, StringVar, BooleanVar, HORIZONTAL, VERTICAL, GROOVE, CENTER, END, INSERT
 from tkinter import Label as TkLabel, Button as TkButton
 from tkinter.ttk import Button, Progressbar, Notebook, Style, Entry, OptionMenu, Frame, Scrollbar, Label
@@ -15,13 +15,19 @@ import xml.etree.cElementTree as ElementTree
 from xml.dom.minidom import parseString
 from collections import OrderedDict
 from time import time
+from functools import wraps
 
 
 class TacoShell:
     """Generic shell class for configurable GUIs"""
-    # pyinstaller --onefile --noconsole --icon=tacoshell.ico tacoshell.py
+    # Create a onefile .exe for distribution:
+    #   pyinstaller --onefile --noconsole --icon=tacoshell.ico tacoshell.py
+    # Create dependency freeze:
+    #   pip freeze > requirements.txt
+    # Install requirements:
+    #   pip install -r requirements.txt
 
-    def __init__(self):
+    def __init__(self, variables=None, settings=None):
         # TODO: After a new mod is added, restart is required for it to show up in flags - FIX
         #       Place mods in a separate folder
 
@@ -30,6 +36,11 @@ class TacoShell:
         self.version = '1.0'
 
         # ROOT settings
+        self.directory = os.path.dirname(__file__) + '/'
+        # Used by taco_wrap(), syntactic sugar initialization
+        self.variables = {}
+        self.settings = {}
+        self.is_running = False
         self.root_window = Tk()
         Tk.report_callback_exception = self.__on_error
         self.root_window.title("Shell GUI")
@@ -68,11 +79,36 @@ class TacoShell:
         self.__set_packing()
         self.__get_mods()
         self.__read_xml_config()
+        self.__read_variables(variables)
+        self.__read_settings(settings)
         self.__position_window(self.root_window, *self.components['window_dimensions'])
         self.__set_theme()
         self.__repack()
         self.__display_initialization_summary()
-        self.root_window.mainloop()
+
+    def __read_variables(self, variables):
+        if variables is not None:
+            for v in variables:
+                if v['type'] == 'StringVar':
+                    self.variables[v['name']] = StringVar()
+                    self.variables[v['name']].set(v['value'])
+
+    def __read_settings(self, settings):
+        if settings is not None:
+            for setting in settings:
+                if setting['name'] == 'element_source':
+                    kwargs = setting['kwargs']
+                    for key, value in kwargs.items():
+                        if value in self.variables.keys():
+                            kwargs[key] = self.variables[value]
+                    self.create_element_source(**kwargs)
+                else:
+                    self.settings[setting] = setting['value']
+
+    def start(self):
+        if not self.is_running:
+            self.is_running = True
+            self.root_window.mainloop()
 
     def __on_closing(self):
         """Define Tkinter instance close event"""
@@ -91,6 +127,7 @@ class TacoShell:
     def __init_appearance(self):
         """Initialize color presets and buffer icons"""
         self.components['window_dimensions'] = [600, 400]
+
         self.colors = {'black': '#000000',
                        'dark': '#2B2B2B',
                        'milddark': '#3C3F41',
@@ -99,6 +136,7 @@ class TacoShell:
                        'tablazy': '#3C3E3F',
                        'lighttext': '#A3B1BF',
                        'muted': '#3592C4'}
+
         self.font_colors = {'normal': '#A9B7C6',
                             'dark': '#2B2B2B',
                             'highlighted': '#A35E9C',
@@ -128,7 +166,7 @@ class TacoShell:
         for icon in icons:
             try:
                 self.icons[icon['name']] = PhotoImage(
-                    Image.open('resources/' + icon['name'] + '.png').resize(icon['size'], ANTIALIAS))
+                    Image.open(self.directory + 'resources/' + icon['name'] + '.png').resize(icon['size'], ANTIALIAS))
             except FileNotFoundError:
                 self.icons[icon['name']] = PhotoImage(Image.new("RGB", icon['size'], "white"))
                 missing_icons.append(icon['name'] + '.png')
@@ -252,32 +290,45 @@ class TacoShell:
 
     def __open_tool_window(self, window_key, mem, title='tool', table=None, actions: list = None):
         """Generic tool window"""
-        # TODO: Make list scrollable
-        window = self.components[window_key] = Toplevel(self.root_frame)
+        # TODO: Scroll functionality not working
+        window = Toplevel(self.root_frame)
         window.grab_set()
         window.title(title)
         self.__position_window(window,
-                               self.root_frame.winfo_rootx() + 50,
-                               self.root_frame.winfo_rooty() + 50,
+                               self.root_frame.winfo_rootx() + 20,
+                               self.root_frame.winfo_rooty() + 20,
                                270,
                                350)
         window.minsize(width=200, height=200)
         window.attributes('-toolwindow', True)
 
-        frame_container = self.components[window_key + '_container'] = Frame(window)
-        frame_container.pack(fill=BOTH, expand=YES)
+        frame_bottom = Frame(window, borderwidth=2, relief=GROOVE)
+        frame_top = Frame(window)
 
-        frame_bottom = Frame(frame_container, borderwidth=2, relief=GROOVE)
+        frame_bottom.pack(side=BOTTOM, fill=X)
+        frame_top.pack(side=TOP, fill=BOTH, expand=YES)
+
         for action in actions:
             Button(frame_bottom, width=10, text=action['text'], command=action['command']).pack(side=RIGHT, padx=3, pady=3)
-        frame_bottom.pack(side=BOTTOM, fill=X)
+
+        canvas = Canvas(frame_top)
+        scrollbar = Scrollbar(canvas, command=canvas.yview)
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        row_container = Frame(canvas)
+
+        scrollbar.pack(side=RIGHT, fill=Y)
+        row_container.pack(fill=BOTH, expand=YES)
+        canvas.pack(side=RIGHT, fill=BOTH, expand=YES)
 
         for name, obj in table.items():
-            self.__add_row(frame_container, mem, name, obj)
+            self.__add_row(row_container, mem, name, obj)
         window.focus_set()
 
-    @staticmethod
-    def __add_row(window, mem, name, obj):
+        self.components[window_key] = window
+        self.components['canvas'] = canvas
+
+    def __add_row(self, window, mem, name, obj):
         """Add a row to tool window"""
         row = Frame(window, borderwidth=2, relief=GROOVE)
         mem.append(StringVar(row))
@@ -297,18 +348,21 @@ class TacoShell:
         # TODO: Consider changing the extra info is added (flag specific)
         if 'kwargs' in obj.keys():
             if 'side' in obj['kwargs'].keys():
-                Label(description, text=str(obj['kwargs']['side'])).pack(side=TOP, anchor='w')
+                TkLabel(description,
+                        fg=self.font_colors['highlighted'],
+                        bg=self.colors['milddark'],
+                        text=str(obj['kwargs']['side'])).pack(side=TOP, anchor='w')
         description.pack(side=LEFT)
 
         row.pack(side=TOP, fill=X, padx=2, pady=1)
 
     def __get_mods(self):
-        """Checks \mod folder for any mods and adds them"""
+        """Checks /mod folder for any mods and adds them"""
         if not os.path.isdir('mods'):
             os.makedirs('mods')
-        for file in os.listdir(os.getcwd() + '\mods'):
+        for file in os.listdir(os.getcwd() + '/mods'):
             name, ext = os.path.splitext(file)
-            if ext == '.py':
+            if ext in ('.py', '.pyc'):
                 flag = {'flag': False, 'default': False}
                 self.mod_list[name] = flag
 
@@ -330,8 +384,8 @@ class TacoShell:
         """Initialize mods, create hooks"""
         child_id = self.__provide_child_id()
         try:
+            # TODO: Add support for .pyc
             # https://stackoverflow.com/questions/67631/how-to-import-a-module-given-the-full-path
-            # import_module('mods')
             module = import_module('.' + name, 'mods')
             instance = module.make_taco()
             self.children[child_id] = instance
@@ -577,15 +631,17 @@ class TacoShell:
             self.components['btn_override'].configure(image=self.icons['switch_on'])
             self.write_to_log('Override activated', 'warning')
 
-    def __create_element_source(self, handle, btn_txt='?', btn_image=None, filetypes=None, validation_func=None,
-                                index=None, flag=True, default=True):
+    def create_element_source(self, handle, var=None, btn_txt='?', btn_image=None, filetypes=None, validation_func=None,
+                              index=None, flag=True, default=True):
         # TODO: Convert to using this
+        # TODO: Create a random handle if no other is provided
         if handle in self.components.keys():
             self.init_summary.append('Key \'{}\' was already registered in \'self.components\', but was added'
                                      .format(handle))
 
         frame = Frame(self.root_frame)
-        var = StringVar()
+        if var is None:
+            var = StringVar()
         entry = Entry(frame, textvariable=var)
         button = self.ShellButton(frame)
 
@@ -670,11 +726,15 @@ class TacoShell:
         c['lbl_progress'].config(text='Processing')
         self.__clear_log()
         self.write_to_log('Started processing', 'good')
+        self.components['txt_log'].update()
         self.components['count_failed'] = 0
         start_time = c['start_time'] = c['last_update'] = time()
 
         try:
-            c['btn_generate_command']()
+            result = c['btn_generate_command']()
+            for line in result:
+                self.write_to_log(str(line), timestamp=False)
+
             self.write_to_log('Finished processing in {} seconds\n'.format(str(time() - start_time)), 'good')
             if not self.components['STOP_COMMAND']:
                 c['bar_progress']['value'] = c['bar_progress']['maximum']
@@ -689,6 +749,10 @@ class TacoShell:
             c['lbl_progress'].config(text='Error')
             c['txt_log'].yview_moveto(1)
             raise e
+
+    def __get_setting(self, key):
+        if key in self.settings.keys():
+            return self.settings[key]
 
     def __clear_log(self):
         txt = self.components['txt_log']
@@ -963,8 +1027,15 @@ class TacoShell:
             # Add search field
             search_handle = Frame(parent)
             # TODO get image as in parameter
-            im_next = PhotoImage(Image.open('resources/next.png').resize((20, 20), ANTIALIAS))
-            im_prev = PhotoImage(Image.open('resources/previous.png').resize((20, 20), ANTIALIAS))
+            try:
+                im_next = PhotoImage(Image.open('resources/next.png').resize((20, 20), ANTIALIAS))
+            except FileNotFoundError:
+                im_next = PhotoImage(Image.new("RGB", (20, 20), "white"))
+            try:
+                im_prev = PhotoImage(Image.open('resources/previous.png').resize((20, 20), ANTIALIAS))
+            except FileNotFoundError:
+                im_prev = PhotoImage(Image.new("RGB", (20, 20), "white"))
+
             # TODO add correct handles for func=
             TacoShell.ShellButton(search_handle,
                                   image=im_next,
@@ -979,12 +1050,12 @@ class TacoShell:
             Label(search_handle, text='Search').pack(side=RIGHT)
 
             scrollbar_vert = TacoShell.AutoScrollbar(index=1,
-                                                master=parent,
-                                                command=super().yview)
+                                                     master=parent,
+                                                     command=super().yview)
             scrollbar_hori = TacoShell.AutoScrollbar(index=2,
-                                                master=parent,
-                                                orient=HORIZONTAL,
-                                                command=super().xview)
+                                                     master=parent,
+                                                     orient=HORIZONTAL,
+                                                     command=super().xview)
 
             search_var = BooleanVar()
             search_var.set(False)
@@ -1075,9 +1146,23 @@ class TacoShell:
                         return
 
 
+def taco_wrap(variables=None, settings=None):
+    # https://www.saltycrane.com/blog/2010/03/simple-python-decorator-examples/
+    def decorator(func):
+        @wraps(func)
+        def wrapped():
+            obj = TacoShell(variables, settings)
+            obj.components['btn_generate'].configure(state='normal')  # This should be default behavior
+            obj.components['btn_generate_command'] = lambda: func(**obj.variables)
+            obj.start()
+        return wrapped
+    return decorator
+
+
 def main():
     try:
-        TacoShell()
+        obj = TacoShell()
+        obj.start()
 
     except:
         traceback.print_exc()
