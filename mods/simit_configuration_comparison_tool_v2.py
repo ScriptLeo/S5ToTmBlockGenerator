@@ -458,6 +458,7 @@ class SimitConfigurationComparisonTool:
         self.child_id = child_id
         self.parent = parent
         self.parent.root_window.title("SimitConfigurationComparisonTool")
+        self.parent.components['btn_generate'].configure(state='normal')
         self.parent.components['btn_generate_command'] = self.run
         self.progressbar = self.parent.components['bar_progress']
 

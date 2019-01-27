@@ -27,49 +27,38 @@ class TacoShell:
     # Install requirements:
     #   pip install -r requirements.txt
 
-    def __init__(self, variables=None, settings=None):
+    __version__ = '1.0'
+    directory = os.path.dirname(__file__) + '/'
+
+    def __init__(self, user_variables=None, user_settings=None, conductor=None, init=True):
         # TODO: After a new mod is added, restart is required for it to show up in flags - FIX
         #       Place mods in a separate folder
 
-        """Initialize"""
-        self.EXPERIMENTAL_MODE = True  # Temporary variable for testing extensive program changes
-        self.version = '1.0'
+        if not init:
+            return
 
+        """Initialize"""
         # ROOT settings
-        self.directory = os.path.dirname(__file__) + '/'
-        # Used by taco_wrap(), syntactic sugar initialization
-        self.variables = {}
-        self.settings = {}
-        self.is_running = False
         self.root_window = Tk()
         Tk.report_callback_exception = self.__on_error
         self.root_window.title("Shell GUI")
-        # self.root.wm_iconbitmap('tacoshell.ico')
+        # self.root_window.wm_iconbitmap(self.directory + 'tacoshell.ico')
         self.root_window.minsize(width=200, height=200)
         self.root_window.protocol("WM_DELETE_WINDOW", self.__on_closing)
         self.root_frame = Frame(self.root_window)
         self.root_frame.pack(fill=BOTH, expand=YES)
 
-        # Declarations
-        self.progress_update_cycle = 1/10
-        self.debug_mode = False
-        self.override = False
-        self.help_text = 'This won\'t help you at all..'
-        self.about_text = 'TacoShell v' + self.version + '\nby Eivind Brate Midtun'
-        self.children = {}
-        self._next_child_id = 0
-        self.components = {}
-        self.instance_changes = []
-        self.config_file = 'shellconfig.xml'
-        self.mod_list = OrderedDict()
-        self.font_colors = {}
-        self.colors = {}
-        self.icons = {}
-        self.style = Style()
-        self.init_summary = []
+        # Containers
+        self.conductor = conductor
+        self.instruments = {}
+        self.components = {}  # Object collection
+        self.variables = {}  # Intrinsic program variables
+        self.settings = {}  # Intrinsic program settings
 
         # Initializations
+        self.__init_variables()
         self.__init_appearance()
+        self.__init_theme()
         self.__init_menu()
         self.__init_debug()
         self.__init_frame_source()
@@ -77,37 +66,62 @@ class TacoShell:
         self.__init_frame_progress()
         self.__init_frame_tabs()
         self.__set_packing()
-        self.__get_mods()
-        self.__read_xml_config()
-        self.__read_variables(variables)
-        self.__read_settings(settings)
+        self.__collect_mods()
+        self.__link_user_variables(user_variables)
+        self.__interpret_user_settings(user_settings)
+        self.__interpret_xml_config()
         self.__position_window(self.root_window, *self.components['window_dimensions'])
-        self.__set_theme()
         self.__repack()
         self.__display_initialization_summary()
 
-    def __read_variables(self, variables):
-        if variables is not None:
-            for v in variables:
-                if v['type'] == 'StringVar':
-                    self.variables[v['name']] = StringVar()
-                    self.variables[v['name']].set(v['value'])
+    def __init_variables(self):
+        self.variables['EXPERIMENTAL_MODE'] = True  # Flag for testing extensive, experimental program changes
+        self.variables['DEBUG_MODE'] = BooleanVar()
+        self.variables['OVERRIDE'] = False
+        self.variables['is_running'] = False
+        self.variables['progress_update_cycle'] = 1 / 10
+        self.variables['help_text'] = 'This won\'t help you at all..'
+        self.variables['about_text'] = 'TacoShell v' + self.__version__ + '\nby Eivind Brate Midtun'
+        self.variables['next_child_id'] = 0
+        self.variables['config_file'] = 'config.xml'
+        self.variables['style'] = Style()
 
-    def __read_settings(self, settings):
-        if settings is not None:
-            for setting in settings:
-                if setting['name'] == 'element_source':
+        self.variables['instance_changes'] = []
+        self.variables['children'] = {}  # Hooks to users
+        self.variables['mod_list'] = OrderedDict()  # List of attached mods
+        self.variables['font_colors'] = {}
+        self.variables['colors'] = {}
+        self.variables['icons'] = {}
+        self.variables['init_summary'] = []
+        self.variables['user_variables'] = {}  # Variable passed to users
+
+    def __link_user_variables(self, user_variables):
+        if user_variables is not None:
+            for v in user_variables:
+                if v['key'] in self.variables.keys():  # Intrinsic variable
+                    self.variables['user_variables'][v['key']] = self.variables[v['key']]
+                else:
+                    if v['type'] == 'StringVar':
+                        self.variables['user_variables'][v['key']] = StringVar()
+                        self.variables['user_variables'][v['key']].set(v['value'])
+                    else:
+                        self.variables['user_variables'][v['key']] = v['value']
+
+    def __interpret_user_settings(self, user_settings):
+        if user_settings is not None:
+            for setting in user_settings:
+                if setting['key'] == 'element_source':
                     kwargs = setting['kwargs']
                     for key, value in kwargs.items():
-                        if value in self.variables.keys():
-                            kwargs[key] = self.variables[value]
+                        if value in self.variables['user_variables'].keys():
+                            kwargs[key] = self.variables['user_variables'][value]
                     self.create_element_source(**kwargs)
                 else:
-                    self.settings[setting] = setting['value']
+                    self.settings[setting['key']] = setting['value']
 
     def start(self):
-        if not self.is_running:
-            self.is_running = True
+        if not self.variables['is_running']:
+            self.variables['is_running'] = True
             self.root_window.mainloop()
 
     def __on_closing(self):
@@ -128,23 +142,23 @@ class TacoShell:
         """Initialize color presets and buffer icons"""
         self.components['window_dimensions'] = [600, 400]
 
-        self.colors = {'black': '#000000',
-                       'dark': '#2B2B2B',
-                       'milddark': '#3C3F41',
-                       'lightgray': '#5E6366',
-                       'tabactive': '#515658',
-                       'tablazy': '#3C3E3F',
-                       'lighttext': '#A3B1BF',
-                       'muted': '#3592C4'}
+        self.variables['colors'] = {'black': '#000000',
+                                    'dark': '#2B2B2B',
+                                    'milddark': '#3C3F41',
+                                    'lightgray': '#5E6366',
+                                    'tabactive': '#515658',
+                                    'tablazy': '#3C3E3F',
+                                    'lighttext': '#A3B1BF',
+                                    'muted': '#3592C4'}
 
-        self.font_colors = {'normal': '#A9B7C6',
-                            'dark': '#2B2B2B',
-                            'highlighted': '#A35E9C',
-                            'bad': '#DE553F',
-                            'warning': '#FFC66D',
-                            'good': '#00AA00',
-                            'muted': '#3592C4',
-                            'debug': '#499C54'}
+        self.variables['font_colors'] = {'normal': '#A9B7C6',
+                                         'dark': '#2B2B2B',
+                                         'highlighted': '#A35E9C',
+                                         'bad': '#DE553F',
+                                         'warning': '#FFC66D',
+                                         'good': '#00AA00',
+                                         'muted': '#3592C4',
+                                         'debug': '#499C54'}
 
         default_medium_icon_size = (35, 35)
         default_mini_icon_size = (20, 20)
@@ -165,58 +179,58 @@ class TacoShell:
 
         for icon in icons:
             try:
-                self.icons[icon['name']] = PhotoImage(
+                self.variables['icons'][icon['name']] = PhotoImage(
                     Image.open(self.directory + 'resources/' + icon['name'] + '.png').resize(icon['size'], ANTIALIAS))
             except FileNotFoundError:
-                self.icons[icon['name']] = PhotoImage(Image.new("RGB", icon['size'], "white"))
+                self.variables['icons'][icon['name']] = PhotoImage(Image.new("RGB", icon['size'], "white"))
                 missing_icons.append(icon['name'] + '.png')
 
         if missing_icons:
-            self.init_summary.append('Missing icon(s) in resources/ folder: ' + ', '.join(missing_icons))
+            self.variables['init_summary'].append('Missing icon(s) in resources/ folder: ' + ', '.join(missing_icons))
 
-    def __set_theme(self):
+    def __init_theme(self):
         """Initialize theme"""
         # Defaults
-        background_map_default = [('active', self.colors['lightgray']),
-                                  ('pressed', self.colors['lightgray'])]
-        foreground_map_default = [('active', self.colors['black']),
-                                  ('pressed', self.colors['black'])]
+        background_map_default = [('active', self.variables['colors']['lightgray']),
+                                  ('pressed', self.variables['colors']['lightgray'])]
+        foreground_map_default = [('active', self.variables['colors']['black']),
+                                  ('pressed', self.variables['colors']['black'])]
 
-        self.style.theme_use('clam')
-        self.style.configure("TNotebook", background=self.colors['milddark'])
-        self.style.map("TNotebook.Tab",
-                       background=[("selected", self.colors['tabactive'])],
-                       foreground=[("selected", self.colors['lighttext'])])
-        self.style.configure('TNotebook.Tab',
-                             background=self.colors['tablazy'],
-                             foreground=self.colors['lighttext'])
-        self.style.configure('TFrame', background=self.colors['milddark'])
-        self.style.map("TButton",
-                       background=background_map_default,
-                       foreground=foreground_map_default)
-        self.style.configure('TButton',
-                             background=self.colors['milddark'],
-                             foreground=self.colors['lighttext'],
-                             relief='raised')
-        self.style.configure('TLabel',
-                             background=self.colors['milddark'],
-                             foreground=self.colors['lighttext'])
-        self.style.configure('TEntry',
-                             background=self.colors['dark'],
-                             foreground=self.colors['lighttext'],
-                             fieldbackground=self.colors['milddark'])
-        self.style.map("TMenubutton",
-                       background=background_map_default,
-                       foreground=foreground_map_default)
-        self.style.configure('TMenubutton',
-                             background=self.colors['dark'],
-                             foreground=self.colors['lighttext'])
-        self.style.configure("Horizontal.TProgressbar",
-                             background=self.colors['muted'])
-        self.style.map("TCheckbutton", background=background_map_default)
-        self.style.configure("TCheckbutton", background=self.colors['milddark'])
-        self.style.map("TRadiobutton", background=background_map_default)
-        self.style.configure("TRadiobutton", background=self.colors['milddark'])
+        self.variables['style'].theme_use('clam')
+        self.variables['style'].configure("TNotebook", background=self.variables['colors']['milddark'])
+        self.variables['style'].map("TNotebook.Tab",
+                                    background=[("selected", self.variables['colors']['tabactive'])],
+                                    foreground=[("selected", self.variables['colors']['lighttext'])])
+        self.variables['style'].configure('TNotebook.Tab',
+                                          background=self.variables['colors']['tablazy'],
+                                          foreground=self.variables['colors']['lighttext'])
+        self.variables['style'].configure('TFrame', background=self.variables['colors']['milddark'])
+        self.variables['style'].map("TButton",
+                                    background=background_map_default,
+                                    foreground=foreground_map_default)
+        self.variables['style'].configure('TButton',
+                                          background=self.variables['colors']['milddark'],
+                                          foreground=self.variables['colors']['lighttext'],
+                                          relief='raised')
+        self.variables['style'].configure('TLabel',
+                                          background=self.variables['colors']['milddark'],
+                                          foreground=self.variables['colors']['lighttext'])
+        self.variables['style'].configure('TEntry',
+                                          background=self.variables['colors']['dark'],
+                                          foreground=self.variables['colors']['lighttext'],
+                                          fieldbackground=self.variables['colors']['milddark'])
+        self.variables['style'].map("TMenubutton",
+                                    background=background_map_default,
+                                    foreground=foreground_map_default)
+        self.variables['style'].configure('TMenubutton',
+                                          background=self.variables['colors']['dark'],
+                                          foreground=self.variables['colors']['lighttext'])
+        self.variables['style'].configure("Horizontal.TProgressbar",
+                                          background=self.variables['colors']['muted'])
+        self.variables['style'].map("TCheckbutton", background=background_map_default)
+        self.variables['style'].configure("TCheckbutton", background=self.variables['colors']['milddark'])
+        self.variables['style'].map("TRadiobutton", background=background_map_default)
+        self.variables['style'].configure("TRadiobutton", background=self.variables['colors']['milddark'])
 
     @staticmethod
     def __position_window(window, x=None, y=None, width=None, height=None):
@@ -285,8 +299,8 @@ class TacoShell:
         for i, [_, w] in enumerate(self.components['packing'].items()):
             w['flag'] = True if v[i].get() in ('True', 'True(default)') else False
         self.__repack()
-        if 'flags_changed' not in self.instance_changes:
-            self.instance_changes.append('flags_changed')
+        if 'flags_changed' not in self.variables['instance_changes']:
+            self.variables['instance_changes'].append('flags_changed')
 
     def __open_tool_window(self, window_key, mem, title='tool', table=None, actions: list = None):
         """Generic tool window"""
@@ -309,7 +323,8 @@ class TacoShell:
         frame_top.pack(side=TOP, fill=BOTH, expand=YES)
 
         for action in actions:
-            Button(frame_bottom, width=10, text=action['text'], command=action['command']).pack(side=RIGHT, padx=3, pady=3)
+            Button(frame_bottom, width=10, text=action['text'], command=action['command']).pack(side=RIGHT, padx=3,
+                                                                                                pady=3)
 
         canvas = Canvas(frame_top)
         scrollbar = Scrollbar(canvas, command=canvas.yview)
@@ -335,9 +350,10 @@ class TacoShell:
         val = 'True{}' if obj['flag'] else 'False{}'.format('(default)' if obj['flag'] == obj['default'] else '')
         mem[-1].set(val)
 
-        choices = [('True' if obj['flag'] else 'False') + '{}'.format('(default)' if obj['default'] == obj['flag'] else ''),
-                   'True{}'.format('(default)' if obj['default'] else ''),
-                   'False{}'.format('(default)' if not obj['default'] else '')]
+        choices = [
+            ('True' if obj['flag'] else 'False') + '{}'.format('(default)' if obj['default'] == obj['flag'] else ''),
+            'True{}'.format('(default)' if obj['default'] else ''),
+            'False{}'.format('(default)' if not obj['default'] else '')]
 
         opt = OptionMenu(row, mem[-1], *choices)
         opt.config(width=12)
@@ -349,14 +365,14 @@ class TacoShell:
         if 'kwargs' in obj.keys():
             if 'side' in obj['kwargs'].keys():
                 TkLabel(description,
-                        fg=self.font_colors['highlighted'],
-                        bg=self.colors['milddark'],
+                        fg=self.variables['font_colors']['highlighted'],
+                        bg=self.variables['colors']['milddark'],
                         text=str(obj['kwargs']['side'])).pack(side=TOP, anchor='w')
         description.pack(side=LEFT)
 
         row.pack(side=TOP, fill=X, padx=2, pady=1)
 
-    def __get_mods(self):
+    def __collect_mods(self):
         """Checks /mod folder for any mods and adds them"""
         if not os.path.isdir('mods'):
             os.makedirs('mods')
@@ -364,21 +380,21 @@ class TacoShell:
             name, ext = os.path.splitext(file)
             if ext in ('.py', '.pyc'):
                 flag = {'flag': False, 'default': False}
-                self.mod_list[name] = flag
+                self.variables['mod_list'][name] = flag
 
     def __set_mods(self, v):
         """Connect to a soft-specified mod"""
-        for i, [k, d] in enumerate(self.mod_list.items()):
+        for i, [k, d] in enumerate(self.variables['mod_list'].items()):
             if v[i].get() in ('True', 'True(default)'):
-                self.mod_list[k]['flag'] = True
+                self.variables['mod_list'][k]['flag'] = True
                 self.__get_ingredients(k, d)
             else:
-                self.mod_list[k]['flag'] = False
+                self.variables['mod_list'][k]['flag'] = False
 
     def __provide_child_id(self):
         """Provide hooked mod an ID"""
-        self._next_child_id += 1
-        return str(self._next_child_id)
+        self.variables['next_child_id'] += 1
+        return str(self.variables['next_child_id'])
 
     def __get_ingredients(self, name, mod):
         """Initialize mods, create hooks"""
@@ -388,8 +404,8 @@ class TacoShell:
             # https://stackoverflow.com/questions/67631/how-to-import-a-module-given-the-full-path
             module = import_module('.' + name, 'mods')
             instance = module.make_taco()
-            self.children[child_id] = instance
-            self.children[child_id].eat_taco(self, child_id)
+            self.variables['children'][child_id] = instance
+            self.variables['children'][child_id].eat_taco(self, child_id)
             self.write_to_log("Added " + name + " to taco")
             self.__repack()
 
@@ -402,17 +418,20 @@ class TacoShell:
         """Convert a string representation of boolean to boolean"""
         return True if string == 'True' else False
 
-    def __read_xml_config(self):
+    def __interpret_xml_config(self):
         """Read program configuration from XML"""
         try:
-            tree = ElementTree.parse(self.config_file)
+            if not os.path.isfile(self.variables['config_file']):
+                return
+
+            tree = ElementTree.parse(self.variables['config_file'])
 
             # Read mods (Before flags)
             mod_node = tree.find('mods')
             for child in mod_node:
                 name = child.tag
                 mod = {'flag': self.__bool(child.text), 'default': False}
-                self.mod_list[name] = mod
+                self.variables['mod_list'][name] = mod
                 if mod['flag']:
                     self.__get_ingredients(name, mod)
 
@@ -442,7 +461,7 @@ class TacoShell:
     def __save_as_xml(self):
         """Create data structure for saving to XML"""
         flag_data = []
-        for item in self.instance_changes:
+        for item in self.variables['instance_changes']:
             if item == 'flags_changed':
                 response = messagebox.askyesno("Unsaved flag changes",
                                                "Save flag settings?")
@@ -451,7 +470,7 @@ class TacoShell:
                         flag_data.append({'tag': k, 'value': v['flag']})
 
         mod_data = []
-        for k, d in self.mod_list.items():
+        for k, d in self.variables['mod_list'].items():
             mod_data.append({'tag': k, 'value': d['flag']})
 
         path_data = []
@@ -470,7 +489,7 @@ class TacoShell:
             {'tag': 'paths', 'elements': path_data},
             {'tag': 'window', 'elements': window_data}
         ]
-        self.__write_xml('shellconfig.xml', save_data)
+        self.__write_xml('config.xml', save_data)
 
     @staticmethod
     def __write_xml(file, data: list = None):
@@ -506,7 +525,7 @@ class TacoShell:
 
     def __display_initialization_summary(self):
         """If notable items occur during initialization, this function will display them in the GUI"""
-        for ele in self.init_summary:
+        for ele in self.variables['init_summary']:
             self.write_to_log(ele, 'bad')
 
     def __init_menu(self):
@@ -517,6 +536,9 @@ class TacoShell:
         menu_options = Menu(menubar, tearoff=0)
         menu_options.add_command(label="help", command=self.menu_help)
         menu_options.add_command(label="about", command=self.__menu_about)
+        if self.conductor is not None:
+            menu_options.add_command(label="refresh", command=self.conductor.mreload, accelerator="ctrl+r")
+            self.root_window.bind_all("<Control-r>", lambda e: self.conductor.mreload())
 
         # Add to menubar
         mem1 = []
@@ -534,7 +556,7 @@ class TacoShell:
                                 window_key='window_mods',
                                 mem=mem2,
                                 title='mods',
-                                table=self.mod_list,
+                                table=self.variables['mod_list'],
                                 actions=[{'text': 'set', 'command': lambda: self.__set_mods(mem2)}]))
 
         menubar.add_cascade(label="?", menu=menu_options)
@@ -542,11 +564,23 @@ class TacoShell:
 
     def menu_help(self):
         """Pop a help dialogue"""
-        messagebox.showinfo("Help", self.help_text)
+        messagebox.showinfo("Help", self.variables['help_text'])
 
     def __menu_about(self):
         """Pop an about dialogue"""
-        messagebox.showinfo("About", self.about_text)
+        messagebox.showinfo("About", self.variables['about_text'])
+
+    @staticmethod
+    def __test1():
+        # EXPERIMENTAL
+        # self.write_to_log('this is a test')
+        print('now I do like this')
+
+    def func(self, name):
+        # EXPERIMENTAL
+        instrument = '_TacoShell' + name
+        component = getattr(self.conductor.influence, instrument)
+        component()
 
     def __init_debug(self):
         """Initialize debug frame"""
@@ -555,24 +589,24 @@ class TacoShell:
         btn_test1 = self.ShellButton(frame_debug,
                                      text='test print',
                                      width=15,
-                                     fg=self.font_colors['normal'],
-                                     command=lambda: self.write_to_log('this is a test'))
+                                     fg=self.variables['font_colors']['normal'],
+                                     command=lambda: self.func('__test1'))
 
         btn_test2 = self.ShellButton(frame_debug,
                                      text='Btn 2',
                                      width=15,
-                                     fg=self.font_colors['normal'])
+                                     fg=self.variables['font_colors']['normal'])
 
         panel_debug = Frame(frame_debug)
         lbl_debug = TkLabel(panel_debug,
-                            bg=self.colors['milddark'],
-                            fg=self.font_colors['debug'],
+                            bg=self.variables['colors']['milddark'],
+                            fg=self.variables['font_colors']['debug'],
                             text="debug",
                             font='semi-bold')
         btn_debug = TkButton(panel_debug,
-                             image=self.icons['debug_off'],
-                             bg=self.colors['milddark'],
-                             activebackground=self.colors['milddark'],
+                             image=self.variables['icons']['debug_off'],
+                             bg=self.variables['colors']['milddark'],
+                             activebackground=self.variables['colors']['milddark'],
                              borderwidth=0,
                              command=self.__toggle_debug)
 
@@ -581,14 +615,14 @@ class TacoShell:
 
         panel_override = Frame(frame_debug)
         lbl_override = TkLabel(panel_override,
-                               bg=self.colors['milddark'],
-                               fg=self.font_colors['warning'],
+                               bg=self.variables['colors']['milddark'],
+                               fg=self.variables['font_colors']['warning'],
                                text="override",
                                font='semi-bold')
         btn_override = TkButton(panel_override,
-                                image=self.icons['switch_off'],
-                                bg=self.colors['milddark'],
-                                activebackground=self.colors['milddark'],
+                                image=self.variables['icons']['switch_off'],
+                                bg=self.variables['colors']['milddark'],
+                                activebackground=self.variables['colors']['milddark'],
                                 borderwidth=0,
                                 command=self.__toggle_override)
 
@@ -606,57 +640,61 @@ class TacoShell:
 
     def __toggle_debug(self):
         """Toggle debugging"""
-        if self.debug_mode:
+        if self.variables['DEBUG_MODE'].get():
             if not os.path.isfile(self.components['entry_path'].get()):
                 self.components['btn_generate'].config(state='disabled')
             self.components['txt_log'].config(state='disabled')
-            self.debug_mode = False
-            self.components['btn_debug'].configure(image=self.icons['debug_off'])
+            self.variables['DEBUG_MODE'].set(False)
+            self.components['btn_debug'].configure(image=self.variables['icons']['debug_off'])
             self.write_to_log('Debug mode deactivated', 'debug')
         else:
             self.components['btn_generate'].config(state='normal')
             self.components['txt_log'].config(state='normal')
-            self.debug_mode = True
-            self.components['btn_debug'].configure(image=self.icons['debug_on'])
+            self.variables['DEBUG_MODE'].set(True)
+            self.components['btn_debug'].configure(image=self.variables['icons']['debug_on'])
             self.write_to_log('Debug mode activated', 'debug')
 
     def __toggle_override(self):
         """Toggle override option which can be used to heighten debug mode"""
-        if self.override:
-            self.override = False
-            self.components['btn_override'].configure(image=self.icons['switch_off'])
+        if self.variables['OVERRIDE']:
+            self.variables['OVERRIDE'] = False
+            self.components['btn_override'].configure(image=self.variables['icons']['switch_off'])
             self.write_to_log('Override deactivated', 'warning')
         else:
-            self.override = True
-            self.components['btn_override'].configure(image=self.icons['switch_on'])
+            self.variables['OVERRIDE'] = True
+            self.components['btn_override'].configure(image=self.variables['icons']['switch_on'])
             self.write_to_log('Override activated', 'warning')
 
-    def create_element_source(self, handle, var=None, btn_txt='?', btn_image=None, filetypes=None, validation_func=None,
-                              index=None, flag=True, default=True):
+    def create_element_source(self, handle, var=None, btn_txt=None, btn_image=None, filetypes=None,
+                              validation_func=None, index=None, flag=True, default=True):
         # TODO: Convert to using this
         # TODO: Create a random handle if no other is provided
         if handle in self.components.keys():
-            self.init_summary.append('Key \'{}\' was already registered in \'self.components\', but was added'
-                                     .format(handle))
+            self.variables['init_summary'].append(
+                'Key \'{}\' was already registered in \'self.components\', but was added'
+                .format(handle))
 
         frame = Frame(self.root_frame)
         if var is None:
             var = StringVar()
         entry = Entry(frame, textvariable=var)
-        button = self.ShellButton(frame)
 
-        kwargs = {'command': lambda: self.__browse_file(filetypes=filetypes, var=var)}
-        if btn_image is None:
-            kwargs['text'] = btn_txt
+        if btn_txt is not None or btn_image is not None:
+            button = self.ShellButton(frame)
+            kwargs = {'command': lambda: self.__browse_file(filetypes=filetypes, var=var)}
+            if btn_image is None:
+                kwargs['text'] = btn_txt
+            else:
+                kwargs['image'] = btn_image
+            button.configure(**kwargs)
+            button.pack(side=LEFT, padx=[5, 0], pady=5)
         else:
-            kwargs['image'] = btn_image
-        button.configure(**kwargs)
+            button = None
 
         if validation_func is not None:
             var.trace('w', validation_func)
 
-        button.pack(side=LEFT, padx=5, pady=5)
-        entry.pack(side=LEFT, fill=X, expand=YES, padx=[0, 5])
+        entry.pack(side=LEFT, fill=X, expand=YES, padx=5)
 
         self.components[handle] = {'frame': frame,
                                    'entry': entry,
@@ -670,7 +708,7 @@ class TacoShell:
         self.components['entry_path_text'] = StringVar()
         entry_path = Entry(frame_source, textvariable=self.components['entry_path_text'])
         btn_set_directory = self.ShellButton(frame_source,
-                                             image=self.icons['browse_excel'],
+                                             image=self.variables['icons']['browse_excel'],
                                              command=lambda: self.__browse_file(entry_path))
         entry_path.bind(sequence='<KeyRelease>', func=self.__path_keypress)
 
@@ -683,7 +721,7 @@ class TacoShell:
 
     def __path_keypress(self, _):
         """Evaluate entered path"""
-        if not self.debug_mode:
+        if not self.variables['DEBUG_MODE'].get():
             self.components['btn_generate'].config(
                 state='normal' if os.path.isfile(self.components['entry_path'].get()) else 'disabled')
 
@@ -691,12 +729,12 @@ class TacoShell:
         """Initialize generate frame"""
         frame_generate = Frame(self.root_frame)
         btn_generate = self.ShellButton(frame_generate,
-                                        image=self.icons['play'],
+                                        image=self.variables['icons']['play'],
                                         state='disabled',
                                         command=self.__generate_command)
 
         btn_stop = self.ShellButton(frame_generate,
-                                    image=self.icons['stop'],
+                                    image=self.variables['icons']['stop'],
                                     state='disabled',
                                     command=self.__stop_command)
 
@@ -732,8 +770,9 @@ class TacoShell:
 
         try:
             result = c['btn_generate_command']()
-            for line in result:
-                self.write_to_log(str(line), timestamp=False)
+            if result is not None:
+                for line in result:
+                    self.write_to_log(str(line), timestamp=False)
 
             self.write_to_log('Finished processing in {} seconds\n'.format(str(time() - start_time)), 'good')
             if not self.components['STOP_COMMAND']:
@@ -750,15 +789,11 @@ class TacoShell:
             c['txt_log'].yview_moveto(1)
             raise e
 
-    def __get_setting(self, key):
-        if key in self.settings.keys():
-            return self.settings[key]
-
     def __clear_log(self):
         txt = self.components['txt_log']
         txt.config(state='normal')
         txt.delete('1.0', END)
-        if not self.debug_mode:
+        if not self.variables['DEBUG_MODE'].get():
             txt.config(state='disabled')
 
     def __init_frame_progress(self):
@@ -792,16 +827,16 @@ class TacoShell:
         frame_log = Frame(tab_control)
         txt_log = self.ScrollableText(frame_log,
                                       wrap='none',
-                                      background=self.colors['dark'],
-                                      foreground=self.font_colors['normal'],
-                                      insertbackground=self.font_colors['normal'],
+                                      background=self.variables['colors']['dark'],
+                                      foreground=self.variables['font_colors']['normal'],
+                                      insertbackground=self.variables['font_colors']['normal'],
                                       state='disabled')
 
-        for key, color in self.font_colors.items():
+        for key, color in self.variables['font_colors'].items():
             txt_log.tag_configure(key, foreground=color)
 
         frame_open = Frame(tab_control)
-        btn_open = self.ShellButton(frame_open, image=self.icons['browse'],
+        btn_open = self.ShellButton(frame_open, image=self.variables['icons']['browse'],
                                     command=self.__open_definition)
 
         btn_open.place(relx=0.5, rely=0.5, anchor=CENTER)
@@ -835,20 +870,20 @@ class TacoShell:
 
             txt_contents = self.ScrollableText(new_tab,
                                                wrap='none',
-                                               background=self.colors['dark'],
-                                               foreground=self.font_colors['normal'],
-                                               insertbackground=self.font_colors['normal'])
+                                               background=self.variables['colors']['dark'],
+                                               foreground=self.variables['font_colors']['normal'],
+                                               insertbackground=self.variables['font_colors']['normal'])
 
             button_panel = Frame(new_tab)
-            btn_close = self.ShellButton(button_panel, image=self.icons['close'],
+            btn_close = self.ShellButton(button_panel, image=self.variables['icons']['close'],
                                          command=lambda: self.__close_tab(tab_control))
 
             lbl_status = Label(button_panel)
 
-            btn_save = self.ShellButton(button_panel, image=self.icons['save'],
+            btn_save = self.ShellButton(button_panel, image=self.variables['icons']['save'],
                                         command=lambda: self.__save_tab_contents(txt_contents, file, lbl_status))
 
-            btn_reset = self.ShellButton(button_panel, image=self.icons['revert'],
+            btn_reset = self.ShellButton(button_panel, image=self.variables['icons']['revert'],
                                          command=lambda: self.__reset_tab_contents(txt_contents, file, lbl_status))
 
             txt_contents.bind('<Key>', lambda e: lbl_status.configure(
@@ -901,7 +936,7 @@ class TacoShell:
 
     def __browse_file(self, var, filetypes=None):
         """Browse source directory"""
-        if self.EXPERIMENTAL_MODE:
+        if self.variables['EXPERIMENTAL_MODE']:
             kwargs = {'title': "Select file"}
             if filetypes is not None:
                 kwargs['filetypes'] = filetypes
@@ -911,7 +946,7 @@ class TacoShell:
                                                   filetypes=(("Taglist", "*.csv"), ("all files", "*.*")))
 
         if response != '':
-            if self.EXPERIMENTAL_MODE:
+            if self.variables['EXPERIMENTAL_MODE']:
                 var.set(response)
             else:
                 self.components['entry_path_text'].set(response)
@@ -970,14 +1005,14 @@ class TacoShell:
         if failed:
             self.components['count_failed'] += 1
         count_failed = self.components['count_failed']
-        num = delta_start*(maximum - count_failed)
+        num = delta_start * (maximum - count_failed)
         det = (value - count_failed)
-        estimated_time_remaining = round(num/det - delta_start) if 0 < det else 0
+        estimated_time_remaining = round(num / det - delta_start) if 0 < det else 0
 
         if force:
             update = True
         else:
-            if self.progress_update_cycle < delta_update:
+            if self.variables['progress_update_cycle'] < delta_update:
                 if estimated_time_remaining < 30 or 1 < delta_update or delta_start < 10:
                     update = True
         if update:
@@ -993,7 +1028,7 @@ class TacoShell:
         if font in ('normal', 'good') and timestamp:
             txt.insert('end', self.get_timestamp() + ':\t', 'highlighted')
         txt.insert('end', ''.join(text) + '\n', font)
-        if not self.debug_mode:
+        if not self.variables['DEBUG_MODE'].get():
             txt.config(state='disabled')
         txt.yview_moveto(1)
 
@@ -1108,55 +1143,94 @@ class TacoShell:
             pass
 
     class AutoScrollbar(Scrollbar):
-            """Scrollbars that auto-hide themselves"""
-            def __init__(self,
-                         shell=None,
-                         index=None,
-                         master=None,
-                         orient=VERTICAL,
-                         command=None,
-                         pack_group=None):
-                self.pack_group = pack_group
-                self.index = index
-                self.shell = shell
-                super().__init__(master=master, orient=orient, command=command)
+        """Scrollbars that auto-hide themselves"""
 
-            def set(self, lo, hi):
-                pg = self.pack_group
-                if float(lo) <= 0.0 and 1.0 <= float(hi):
-                    pg[self.index]['flag'].set(False)
-                else:
-                    pg[self.index]['flag'].set(True)
-                self.pack_all()
-                Scrollbar.set(self, lo, hi)
+        def __init__(self,
+                     shell=None,
+                     index=None,
+                     master=None,
+                     orient=VERTICAL,
+                     command=None,
+                     pack_group=None):
+            self.pack_group = pack_group
+            self.index = index
+            self.shell = shell
+            super().__init__(master=master, orient=orient, command=command)
 
-            def pack_all(self):
-                pg = self.pack_group
-                for w in pg:
-                    if w['old_flag'].get() and not w['flag'].get():  # Change from True to False
-                        w['handle'].pack_forget()
-                        w['old_flag'].set(w['flag'].get())
+        def set(self, lo, hi):
+            pg = self.pack_group
+            if float(lo) <= 0.0 and 1.0 <= float(hi):
+                pg[self.index]['flag'].set(False)
+            else:
+                pg[self.index]['flag'].set(True)
+            self.pack_all()
+            Scrollbar.set(self, lo, hi)
 
-                    elif w['flag'].get() and not w['old_flag'].get():  # Change from False to True
-                        for w_ in pg:
-                            w_['handle'].pack_forget()
-                            if w_['flag'].get():  # Check if member should be packed
-                                w_['handle'].pack(**w_['kwargs'])
-                                w_['old_flag'].set(w_['flag'].get())
-                        return
+        def pack_all(self):
+            pg = self.pack_group
+            for w in pg:
+                if w['old_flag'].get() and not w['flag'].get():  # Change from True to False
+                    w['handle'].pack_forget()
+                    w['old_flag'].set(w['flag'].get())
+
+                elif w['flag'].get() and not w['old_flag'].get():  # Change from False to True
+                    for w_ in pg:
+                        w_['handle'].pack_forget()
+                        if w_['flag'].get():  # Check if member should be packed
+                            w_['handle'].pack(**w_['kwargs'])
+                            w_['old_flag'].set(w_['flag'].get())
+                    return
+
+    class Setting:
+        # TODO: Define all program settings like this
+        def __init__(self, nam, typ, val, default=None):
+            if default is None:
+                default = val
+            self.__dat = {'name': nam, 'type': typ, 'value': val, 'default': default}
+
+        def get(self):
+            return self.__dat
+
+
+def cvar(key: str, *args):
+    """
+    Create variable:
+    Creates variable that will be interpreted and potentially initialized by TacoShell,
+    and will be forwarded to the function decorated by @taco_wrap().
+
+    :param key: A key that can be referenced and used in the settings: dict.
+    :param args: If empty, the parameter intrinsic to TacoShell will be selected and passed to the decorated function.
+                If args contains 'typ' and 'val', TacoShell object will create variable with name, type and value and
+                pass to the decorated function. The key must not exist in TacoShell.variables, else it will be
+                overridden by its intrinsic variable with the same key.
+    :return: Variable in expected format for TacoShell. Variables should be passed in as a list of cvars.
+    """
+    if len(args) == 0:
+        return {'key': key}
+    elif len(args) == 2:
+        return {'key': key, 'type': args[0], 'value': args[1]}
 
 
 def taco_wrap(variables=None, settings=None):
-    # https://www.saltycrane.com/blog/2010/03/simple-python-decorator-examples/
-    def decorator(func):
-        @wraps(func)
-        def wrapped():
-            obj = TacoShell(variables, settings)
-            obj.components['btn_generate'].configure(state='normal')  # This should be default behavior
-            obj.components['btn_generate_command'] = lambda: func(**obj.variables)
-            obj.start()
-        return wrapped
-    return decorator
+        """
+        Decorator function for 'one-line initialization.
+
+        :param variables: Optional
+        :param settings: Optional
+        """
+
+        # https://www.saltycrane.com/blog/2010/03/simple-python-decorator-examples/
+        def decorator(func):
+            @wraps(func)
+            def wrapped():
+                obj = TacoShell(variables, settings)
+                obj.components['btn_generate'].configure(state='normal')  # This should be default behavior
+                obj.components['btn_generate_command'] = lambda: func(**obj.variables['user_variables'])
+                obj.start()
+
+            return wrapped
+
+        return decorator
 
 
 def main():
