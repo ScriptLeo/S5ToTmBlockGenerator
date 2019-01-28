@@ -7,4 +7,3 @@
 -Loads settings from XML.
 -Configurable inclusion of plugins/mods.
 -Edit and run new code without closing the GUI.
-
